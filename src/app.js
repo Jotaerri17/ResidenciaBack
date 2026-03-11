@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const empresaRoutes = require('./routes/EmpresaRoutes.js')
 
 const app = express();
 
@@ -24,16 +25,16 @@ const MONGO_URI = process.env.MONGO_URI;
     app.listen(PORT, () => {
       console.log(`Servidor rodando em http://localhost:${PORT}`);
     });
-  })
+  })e
   .catch((err) => {
     console.error("Erro ao conectar ao MongoDB:", err);
   }); */
 
 // 4. Exemplo de uma rota de teste (seu primeiro endpoint)
+app.use('/empresa', empresaRoutes)
 app.get('/', (req, res) => {
   res.json({ mensagem: "API funcionando e conectada ao banco!" });
 });
-
 
 app.get('/api/test', (req, res) => {
   res.json({ mensagem: "O Frontend está falando com o Backend com sucesso!" });
