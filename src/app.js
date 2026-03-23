@@ -22,6 +22,16 @@ app.use(cors({
 app.use(express.json());
 
 // ==========================================
+// 4. doc
+// ==========================================
+
+
+const swaggerUi = require('swagger-ui-express')
+const swaggerSpec = require('./docs/swagger')
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+
+// ==========================================
 // 4. ROTAS DA APLICAÇÃO
 // ==========================================
 
