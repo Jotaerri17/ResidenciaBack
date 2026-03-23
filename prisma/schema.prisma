@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url= env("DATABASE_URL")
 }
 model USER {
   id String @id @default(cuid())
@@ -18,9 +19,77 @@ model USER {
   password String
   
 }
-model Empresa {
-  id      String  @id @default(cuid())
-  name    String
-  manager String
-  caixa   Float?  @default(0) // Usando número (Float) para o caixa, começando em 0
+model Room {
+  id           String     @id @default(uuid())
+  code         String     @unique
+  status       RoomStatus @default(WAITING)
+  currentRound Int        @default(0)
+  totalRounds  Int        @default(4)
+
+  //configuráveis
+  caixa        Float      @default(700000)
+  juros        Float      @default(12)
+
+  quebrasPereciveis Float @default(2)
+  quebrasMercearia  Float @default(1.5)
+  quebrasEletro     Float @default(0)
+  quebrasHipel      Float @default(1)
+  agingPereciveis   Float @default(5.8)
+  agingMercearia    Float @default(0.8)
+  agingEletro       Float @default(1.3)
+  agingHipel        Float @default(1.1)
+
+  impostoPereciveis Float @default(12)
+  impostoMercearia  Float @default(7)
+  impostoEletro     Float @default(25)
+  impostoHipel      Float @default(17) 
+
+
+  custoUntPereciveis Float 
+  custoUntMercearia  Float 
+  custoUntEletro     Float 
+  custoUntHipel      Float 
+
+
+
+  // Relações
+  events       RoomEvent[]
+  companies    Company[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model RoomEvent {
+  id          String    @id @default(uuid())
+  roomId      String
+  round       Int
+  type        EventType
+  description String
+
+  room        Room      @relation(fields: [roomId], references: [id])
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  roomId      String
+  name        String
+  managerName String
+  caixa       Float  // caixa individial da empresa
+
+  room        Room     @relation(fields: [roomId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+enum RoomStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+}
+
+enum EventType {
+  EQUIPMENT_FAILURE
+  SYSTEM_FAILURE
+  OTHER
 }

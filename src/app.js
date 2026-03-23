@@ -1,36 +1,39 @@
-// 1. Carrega as variáveis do arquivo .env
 require('dotenv').config();
 
-const express = require('express');
-const cors = require('cors');
+const express = require('express')
+const cors = require('cors')
 
-// 2. Importação das suas rotas
-const empresaRoutes = require('./routes/EmpresaRoutes.js');
+// 2. Importação das rotas (AGORA COM REQUIRE)
+const roomsRoutes = require('./routes/RoomsRoutes')
 
-const app = express();
+// Prisma
+const prisma = require('./lib/prisma')
+prisma.$connect()
+  .then(() => console.log('✅ Conectado ao banco!'))
+  .catch((err) => console.error('❌ Erro na conexão:', err.message))
+
+const app = express()
 
 // 3. Middlewares
 app.use(cors({
-  origin: '*' // Permite que qualquer front acesse (ajuste em produção)
-})); 
-app.use(express.json()); // Permite que o app entenda arquivos JSON recebidos no body
+  origin: '*'
+}));
+
+app.use(express.json());
 
 // ==========================================
 // 4. ROTAS DA APLICAÇÃO
 // ==========================================
 
-// Mantendo sua rota de empresas intacta! O controller fará o trabalho pesado.
-app.use('/empresa', empresaRoutes);
+app.use('/rooms', roomsRoutes);
 
-// Rotas de teste para validar se a API está de pé
 app.get('/', (req, res) => {
   res.json({ mensagem: "🚀 API Express funcionando com Postgres e Neon!" });
 });
-const prisma = require('./lib/prisma.js'); // (ou import, dependendo de como está seu código)
 
 app.get('/usuarios', async (req, res) => {
   try {
-    const usuarios = await prisma.uSER.findMany();
+    const usuarios = await prisma.user.findMany(); // 👈 aqui também corrigi
     res.json(usuarios);
   } catch (error) {
     console.error(error);
