@@ -21,6 +21,8 @@ model USER {
 model Room {
   id           String     @id @default(uuid())
   code         String     @unique
+  facilitatorToken String     @unique @default(uuid())
+
   status       RoomStatus @default(WAITING)
   currentRound Int        @default(0)
   totalRounds  Int        @default(4)
@@ -85,6 +87,7 @@ enum RoomStatus {
   WAITING
   IN_PROGRESS
   FINISHED
+  CANCELLED
 }
 
 enum EventType {

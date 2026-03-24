@@ -5,6 +5,7 @@ const router = Router()
 
 router.post('/', roomController.handleCreateRoom)       // criar sala
 router.get('/:code', roomController.handleGetRoom)  // buscar sala pelo código
+router.patch('/:code/cancel', roomController.handleCancelRoom) // cancela a sala
 
 /**
  * @swagger
@@ -115,5 +116,35 @@ router.get('/:code', roomController.handleGetRoom)  // buscar sala pelo código
  *         description: Sala não encontrada
  *       500:
  *         description: Erro ao buscar sala
+ * /rooms/{code}/cancel:
+ *   patch:
+ *     summary: Cancela uma sala
+ *     tags:
+ *       - Rooms
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Código único da sala
+ *       - in: header
+ *         name: x-facilitator-token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Token do facilitador
+ *     responses:
+ *       200:
+ *         description: Sala cancelada com sucesso
+ *       401:
+ *         description: Token do facilitador obrigatório
+ *       403:
+ *         description: Acesso negado
+ *       404:
+ *         description: Sala não encontrada
+ *       500:
+ *         description: Erro ao cancelar sala
  */
+ 
 module.exports = router

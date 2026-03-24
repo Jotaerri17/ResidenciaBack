@@ -1,10 +1,11 @@
 const {Router} = require ('express')
-const {handleJoinRoom, handleGetCompanies} = require ('../controller/CompaniesController.js')
+const {handleJoinRoom, handleGetCompanies, handleLeaveRoom} = require ('../controller/CompaniesController.js')
 
 const router = Router()
 
 router.post('/join', handleJoinRoom) // coloca os dados da empresa e entra na sala
 router.get('/:code', handleGetCompanies) // pega as empresas que estão na sala
+router.delete('/:id/leave', handleLeaveRoom)
 
 /**
  * @swagger
@@ -63,5 +64,24 @@ router.get('/:code', handleGetCompanies) // pega as empresas que estão na sala
  *         description: Sala não encontrada
  *       500:
  *         description: Erro ao buscar empresas
+ * /companies/{id}/leave:
+ *   delete:
+ *     summary: Gerente sai da sala
+ *     tags:
+ *       - Companies
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID da empresa
+ *     responses:
+ *       200:
+ *         description: Empresa removida da sala com sucesso
+ *       404:
+ *         description: Empresa não encontrada
+ *       500:
+ *         description: Erro ao sair da sala
  */
 module.exports = router

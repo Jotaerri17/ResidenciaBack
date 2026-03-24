@@ -35,5 +35,18 @@ async function getCompaniesByRoom(code) {
     }   
     return room.companies
 }
+async function leaveRoom({ companyId }) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+  })
 
-module.exports = {joinRoom, getCompaniesByRoom}
+  if (!company) {
+    throw new Error('COMPANY_NOT_FOUND')
+  }
+
+  await prisma.company.delete({
+    where: { id: companyId },
+  })
+}
+
+module.exports = {joinRoom, getCompaniesByRoom, leaveRoom}

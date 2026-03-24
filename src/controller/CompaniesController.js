@@ -1,5 +1,5 @@
 const prisma = require('../lib/prisma')
-const { joinRoom, getCompaniesByRoom } = require('../service/CompaniesService.js')
+const { joinRoom, getCompaniesByRoom , leaveRoom} = require('../service/CompaniesService.js')
 
 async function handleJoinRoom(req, res) {
     try {
@@ -11,7 +11,8 @@ async function handleJoinRoom(req, res) {
         }
         const company = await joinRoom({ code, name, managerName })
         return res.status(201).json({
-            message: "Conectou-se a sala"
+            message: "Conectou-se a sala",
+            companyId: company.id
         })
     } catch (error) {
         if (error.message === 'ROOM_NOT_FOUND') {
@@ -42,5 +43,21 @@ async function handleGetCompanies(req, res) {
     return res.status(500).json({ message: 'Erro ao buscar empresas.' })
   }
 }
+async function handleLeaveRoom(req, res) {
+  try {
+    const { id } = req.params
+
+    await leaveRoom({ companyId: id })
+
+    return res.status(200).json({ message: 'Removido da sala com sucesso!' })
+  } catch (error) {
+    if (error.message === 'COMPANY_NOT_FOUND') {
+      return res.status(404).json({ message: 'Empresa não encontrada.' })
+    }
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao sair da sala.' })
+  }
+}
+
+module.exports = { handleJoinRoom, handleGetCompanies, handleLeaveRoom }
     
-module.exports = {handleGetCompanies, handleJoinRoom}
