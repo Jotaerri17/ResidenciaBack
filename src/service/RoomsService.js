@@ -54,7 +54,7 @@ async function getRoomByCode(code) {
 
   return room
 }
-async function cancelRoom({ code, facilitatorToken }) {
+async function cancelRoom({ code, facilitatorToken}, io) {
   const room = await prisma.room.findUnique({
     where: { code },
   })
@@ -70,11 +70,12 @@ async function cancelRoom({ code, facilitatorToken }) {
   if (room.status === 'CANCELLED') {
     throw new Error('ROOM_ALREADY_CANCELLED')
   }
-
+  io.to(code).emit('room_cancelled')
   const updatedRoom = await prisma.room.update({
     where: { code },
     data: { status: 'CANCELLED' },
   })
+
 
   return updatedRoom
 }

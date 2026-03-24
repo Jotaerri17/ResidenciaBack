@@ -1,5 +1,6 @@
 const { createRoom, getRoomByCode, cancelRoom }= require ('../service/RoomsService.js')
 
+
 async function handleCreateRoom(req, res) {
   try {
     const { caixa, juros, totalRounds, quebrasPereciveis,
@@ -39,6 +40,7 @@ async function handleGetRoom(req, res) {
 }
 async function handleCancelRoom(req, res) {
   try {
+    const io = req.app.get('io')
     const { code } = req.params
     const facilitatorToken = req.headers['x-facilitador-token']
 
@@ -46,7 +48,7 @@ async function handleCancelRoom(req, res) {
       return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
     }
 
-    const room = await cancelRoom({ code, facilitatorToken })
+    const room = await cancelRoom({ code, facilitatorToken }, io)
 
     return res.status(200).json({
       message: 'Sala cancelada com sucesso!',
