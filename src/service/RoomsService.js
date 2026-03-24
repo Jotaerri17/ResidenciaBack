@@ -54,5 +54,29 @@ async function getRoomByCode(code) {
 
   return room
 }
+async function cancelRoom({ code, facilitatorToken }) {
+  const room = await prisma.room.findUnique({
+    where: { code },
+  })
 
-module.exports = {createRoom, getRoomByCode}
+  if (!room) {
+    throw new Error('ROOM_NOT_FOUND')
+  }
+
+  if (room.facilitatorToken !== facilitatorToken) {
+    throw new Error('UNAUTHORIZED')
+  }
+
+  if (room.status === 'CANCELLED') {
+    throw new Error('ROOM_ALREADY_CANCELLED')
+  }
+
+  const updatedRoom = await prisma.room.update({
+    where: { code },
+    data: { status: 'CANCELLED' },
+  })
+
+  return updatedRoom
+}
+
+module.exports = {createRoom, getRoomByCode, cancelRoom}

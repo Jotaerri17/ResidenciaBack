@@ -1,10 +1,10 @@
-const { createRoom, getRoomByCode }= require ('../service/RoomsService.js')
+const { createRoom, getRoomByCode, cancelRoom }= require ('../service/RoomsService.js')
 
 async function handleCreateRoom(req, res) {
   try {
     const { caixa, juros, totalRounds, quebrasPereciveis,
     quebrasMercearia, quebrasEletro,quebrasHipel,agingEletro,agingHipel,agingMercearia,agingPereciveis, 
-    impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events } = req.body
+    impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events} = req.body
 
     const room = await createRoom({ caixa, juros, totalRounds, quebrasPereciveis,
     quebrasMercearia, quebrasEletro,quebrasHipel,agingEletro,agingHipel,agingMercearia,agingPereciveis, 
@@ -13,6 +13,7 @@ async function handleCreateRoom(req, res) {
     return res.status(201).json({
       message: 'Sala criada com sucesso!',
       room,
+      facilitadorToken: room.facilitadorToken
     })
   } catch (error) {
     console.error(error)
@@ -36,5 +37,34 @@ async function handleGetRoom(req, res) {
     return res.status(500).json({ message: 'Erro ao buscar sala.' })
   }
 }
+async function handleCancelRoom(req, res) {
+  try {
+    const { code } = req.params
+    const facilitatorToken = req.headers['x-facilitador-token']
 
-module.exports = {handleCreateRoom, handleGetRoom}
+    if (!facilitatorToken) {
+      return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
+    }
+
+    const room = await cancelRoom({ code, facilitatorToken })
+
+    return res.status(200).json({
+      message: 'Sala cancelada com sucesso!',
+      room,
+    })
+  } catch (error) {
+    if (error.message === 'ROOM_NOT_FOUND') {
+      return res.status(404).json({ message: 'Sala não encontrada.' })
+    }
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(403).json({ message: 'Acesso negado.' })
+    }
+    if (error.message === 'ROOM_ALREADY_CANCELLED') {
+      return res.status(400).json({ message: 'Sala já foi cancelada.' })
+    }
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao cancelar sala.' })
+  }
+}
+
+module.exports = {handleCreateRoom, handleGetRoom, handleCancelRoom}
