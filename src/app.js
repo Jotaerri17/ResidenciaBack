@@ -2,66 +2,55 @@ require('dotenv').config();
 
 const express = require('express')
 const cors = require('cors')
+const http = require('http')
+const { Server } = require('socket.io')
 
-// 2. Importação das rotas (AGORA COM REQUIRE)
 const roomsRoutes = require('./routes/RoomsRoutes')
 const companiesRoutes = require('./routes/CompaniesRoutes')
-
-// Prisma
-const prisma = require('./lib/prisma')
-prisma.$connect()
-  .then(() => console.log('✅ Conectado ao banco!'))
-  .catch((err) => console.error('❌ Erro na conexão:', err.message))
-
-const app = express()
-
-// 3. Middlewares
-app.use(cors({
-  origin: '*'
-}));
-
-app.use(express.json());
-
-// ==========================================
-// 4. doc
-// ==========================================
-
 
 const swaggerUi = require('swagger-ui-express')
 const swaggerSpec = require('./docs/swagger')
 
+const prisma = require('./lib/prisma')
+
+const app = express()
+const server = http.createServer(app)
+
+const io = new Server(server, {
+  cors: { origin: '*' }
+})
+
+// disponibiliza o io para os controllers
+app.set('io', io)
+
+io.on('connection', (socket) => {
+  console.log('cliente conectado:', socket.id)
+
+  socket.on('join_room', (roomCode) => {
+    socket.join(roomCode)
+    console.log(`socket ${socket.id} entrou na sala ${roomCode}`)
+  })
+
+  socket.on('disconnect', () => {
+    console.log('cliente desconectado:', socket.id)
+  })
+})
+
+app.use(cors({ origin: '*' }))
+app.use(express.json())
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
-
-// ==========================================
-// 4. ROTAS DA APLICAÇÃO
-// ==========================================
-
-app.use('/rooms', roomsRoutes);
+app.use('/rooms', roomsRoutes)
 app.use('/companies', companiesRoutes)
 
 app.get('/', (req, res) => {
-  res.json({ mensagem: "🚀 API Express funcionando com Postgres e Neon!" });
-});
+  res.json({ mensagem: "🚀 API Express funcionando!" })
+})
 
-app.get('/usuarios', async (req, res) => {
-  try {
-    const usuarios = await prisma.user.findMany(); // 👈 aqui também corrigi
-    res.json(usuarios);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro no prisma" });
-  }
-});
+prisma.$connect()
+  .then(() => console.log('✅ Conectado ao banco!'))
+  .catch((err) => console.error('❌ Erro na conexão:', err.message))
 
-app.get('/api/test', (req, res) => {
-  res.json({ mensagem: "O Frontend está falando com o Backend com sucesso!" });
-});
-
-// ==========================================
-// 5. INICIANDO O SERVIDOR
-// ==========================================
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-});
+const PORT = process.env.PORT || 3000
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`)
+})
