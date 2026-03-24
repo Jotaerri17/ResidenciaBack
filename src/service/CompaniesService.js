@@ -18,7 +18,7 @@ async function joinRoom({ code, name, managerName }, io) {
       roomId: room.id,
       name,
       managerName,
-      cash: room.caixa,
+      caixa: room.caixa,
     },
   })
 
