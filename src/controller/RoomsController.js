@@ -1,4 +1,4 @@
-const { createRoom, getRoomByCode, cancelRoom }= require ('../service/RoomsService.js')
+const { createRoom, getRoomByCode, cancelRoom, startRoom }= require ('../service/RoomsService.js')
 
 
 async function handleCreateRoom(req, res) {
@@ -69,4 +69,40 @@ async function handleCancelRoom(req, res) {
   }
 }
 
-module.exports = {handleCreateRoom, handleGetRoom, handleCancelRoom}
+async function handleStartRoom(req, res) {
+  try {
+    const { code } = req.params
+    const facilitatorToken = req.headers['x-facilitator-token']
+    const io = req.app.get('io')
+
+    if (!facilitatorToken) {
+      return res.status(401).json({
+        message: 'Token do facilitador obrigatório.'
+      })
+    }
+
+    const room = await startRoom({ code, facilitatorToken }, io)
+
+    return res.status(200).json({
+      message: 'Jogo iniciado com sucesso!',
+      room,
+    })
+
+  } catch (error) {
+    if (error.message === 'ROOM_NOT_FOUND')
+      return res.status(404).json({ message: 'Sala não encontrada.' })
+
+    if (error.message === 'UNAUTHORIZED')
+      return res.status(403).json({ message: 'Acesso negado.' })
+
+    if (error.message === 'ROOM_NOT_WAITING')
+      return res.status(400).json({ message: 'Sala não está aguardando.' })
+
+    if (error.message === 'NO_COMPANIES')
+      return res.status(400).json({ message: 'Nenhuma empresa na sala.' })
+
+    return res.status(500).json({ message: 'Erro ao iniciar jogo.' })
+  }
+}
+
+module.exports = {handleCreateRoom, handleGetRoom, handleCancelRoom, handleStartRoom}

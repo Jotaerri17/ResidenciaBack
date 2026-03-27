@@ -6,6 +6,7 @@ const router = Router()
 router.post('/', roomController.handleCreateRoom)       // criar sala
 router.get('/:code', roomController.handleGetRoom)  // buscar sala pelo código
 router.patch('/:code/cancel', roomController.handleCancelRoom) // cancela a sala
+router.patch('/:code/start', roomController.handleStartRoom)
 
 /**
  * @swagger
