@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 model USER {
   id String @id @default(cuid())
@@ -51,6 +52,13 @@ model Room {
   custoUntEletro     Float 
   custoUntHipel      Float 
 
+  capexSegurancaValor        Float @default(15000)
+  capexBalancaValor          Float @default(20000)
+  capexRedesValor            Float @default(18000)
+  capexSiteValor             Float @default(25000)
+  capexSelfCheckoutValor     Float @default(40000)
+  capexMelhoriaContinuaValor Float @default(12000)
+
 
 
   // Relações
@@ -79,8 +87,41 @@ model Company {
   caixa       Float  // caixa individial da empresa
 
   room        Room     @relation(fields: [roomId], references: [id])
+  configs     CompanyConfig[]
 
   createdAt   DateTime @default(now())
+}
+
+model CompanyConfig {
+  id        String  @id @default(uuid())
+  companyId String
+  round     Int
+
+  estoquePereciveis Float @default(0)
+  estoqueMercearia  Float @default(0)
+  estoqueEletro     Float @default(0)
+  estoqueHipel      Float @default(0)
+
+  margemPereciveis Float @default(0)
+  margemMercearia  Float @default(0)
+  margemEletro     Float @default(0)
+  margemHipel      Float @default(0)
+
+  operadoresVenda   Int @default(0)
+  operadoresServico Int @default(0)
+
+  capexSeguranca        Boolean @default(false)
+  capexBalanca          Boolean @default(false)
+  capexRedes            Boolean @default(false)
+  capexSite             Boolean @default(false)
+  capexSelfCheckout     Boolean @default(false)
+  capexMelhoriaContinua Boolean @default(false)
+
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, round])
 }
 
 enum RoomStatus {

@@ -80,4 +80,28 @@ async function cancelRoom({ code, facilitatorToken}, io) {
   return updatedRoom
 }
 
-module.exports = {createRoom, getRoomByCode, cancelRoom}
+async function startRoom({ code, facilitatorToken }, io) {
+  const room = await prisma.room.findUnique({
+    where: { code },
+    include: { companies: true }
+  })
+
+  if (!room) throw new Error('ROOM_NOT_FOUND')
+  if (room.facilitatorToken !== facilitatorToken)
+    throw new Error('UNAUTHORIZED')
+  if (room.status !== 'WAITING')
+    throw new Error('ROOM_NOT_WAITING')
+  if (room.companies.length === 0)
+    throw new Error('NO_COMPANIES')
+
+  const updatedRoom = await prisma.room.update({
+    where: { code },
+    data: { status: 'IN_PROGRESS', currentRound: 1 },
+  })
+
+  io.to(code).emit('game_started')
+
+  return updatedRoom
+}
+
+module.exports = {createRoom, getRoomByCode, cancelRoom, startRoom}
