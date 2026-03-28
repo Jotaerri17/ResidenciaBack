@@ -1,11 +1,13 @@
 const {Router} = require ('express')
-const {handleJoinRoom, handleGetCompanies, handleLeaveRoom} = require ('../controller/CompaniesController.js')
+const {handleJoinRoom, handleGetCompanies, handleLeaveRoom, handleGetCompanySettings, handleUpdateRoundSettings} = require ('../controller/CompaniesController.js')
 
 const router = Router()
 
 router.post('/join', handleJoinRoom) // coloca os dados da empresa e entra na sala
+router.get('/:id/settings', handleGetCompanySettings) // pega settings da empresa por ID
 router.get('/:code', handleGetCompanies) // pega as empresas que estão na sala
 router.delete('/:id/leave', handleLeaveRoom)
+router.put('/:id/settings', handleUpdateRoundSettings);
 
 /**
  * @swagger
