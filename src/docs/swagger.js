@@ -8,18 +8,18 @@ const options = {
       version: '1.0.0',
       description: 'API da dinâmica de gestão de loja',
     },
-  },
-  components: {
+    components: {
       securitySchemes: {
         facilitatorToken: {
           type: 'apiKey',
           in: 'header',
           name: 'x-facilitator-token',
           description: 'Token do facilitador gerado ao criar a sala',
-        }
-      }
+        },
+      },
     },
-  apis: ['./src/routes/*.js'], // lê as anotações das rotas
+  },
+  apis: ['./src/routes/*.js'],
 }
 
 module.exports = swaggerJsdoc(options)

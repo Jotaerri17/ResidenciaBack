@@ -2,7 +2,8 @@ const { saveConfig } = require('../service/CompanyConfigService')
 
 async function handleSaveConfig(req, res) {
   try {
-    const { companyId, ...configData } = req.body
+    const companyId = req.params.id || req.body.companyId
+    const { companyId: _, ...configData } = req.body
     const io = req.app.get('io')
 
     if (!companyId) {
