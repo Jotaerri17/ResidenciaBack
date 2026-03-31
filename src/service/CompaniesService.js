@@ -87,12 +87,12 @@ async function getCompanySettings(companyId) {
     custoUntEletro: room.custoUntEletro,
     custoUntHipel: room.custoUntHipel,
     capexItems: [
-      { key: 'seguranca', label: 'Segurança', cost: 50000, risk: 'Multas por incidentes de segurança' },
-      { key: 'balanca', label: 'Balança', cost: 30000, risk: 'Perda financeira em pesagem' },
-      { key: 'redes', label: 'Redes', cost: 40000, risk: 'Parada no PDV (ponto de venda)' },
-      { key: 'site', label: 'Site', cost: 35000, risk: 'Perda de vendas online' },
-      { key: 'selfCheckout', label: 'Self Checkout', cost: 80000, risk: 'Filas longas e perda de clientes' },
-      { key: 'melhoriaContinua', label: 'Melhoria Contínua', cost: 25000, risk: 'Ineficiência operacional' },
+      { key: 'seguranca', label: 'Segurança', cost: room.capexSegurancaValor, risk: 'Multas por incidentes de segurança' },
+      { key: 'balanca', label: 'Balança', cost: room.capexBalancaValor, risk: 'Perda financeira em pesagem' },
+      { key: 'redes', label: 'Redes', cost: room.capexRedesValor, risk: 'Parada no PDV (ponto de venda)' },
+      { key: 'site', label: 'Site', cost: room.capexSiteValor, risk: 'Perda de vendas online' },
+      { key: 'selfCheckout', label: 'Self Checkout', cost: room.capexSelfCheckoutValor, risk: 'Filas longas e perda de clientes' },
+      { key: 'melhoriaContinua', label: 'Melhoria Contínua', cost: room.capexMelhoriaContinuaValor, risk: 'Ineficiência operacional' },
     ],
     custoPorOperador: 3000,
   };
@@ -110,8 +110,12 @@ async function updateRoundSettings(companyId, settings) {
 
   // Custos dos itens CAPEX
   const capexCatalog = {
-    seguranca: 50000, balanca: 30000, redes: 40000,
-    site: 35000, selfCheckout: 80000, melhoriaContinua: 25000,
+    seguranca: room.capexSegurancaValor,
+    balanca: room.capexBalancaValor,
+    redes: room.capexRedesValor,
+    site: room.capexSiteValor,
+    selfCheckout: room.capexSelfCheckoutValor,
+    melhoriaContinua: room.capexMelhoriaContinuaValor,
   };
 
   // CAPEX selecionado

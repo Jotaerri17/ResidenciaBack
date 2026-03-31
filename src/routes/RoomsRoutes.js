@@ -26,6 +26,10 @@ router.patch('/:code/start', roomController.handleStartRoom)
  *               - custoUntMercearia
  *               - custoUntEletro
  *               - custoUntHipel
+ *               - estoqueDisponivelPereciveis
+ *               - estoqueDisponivelMercearia
+ *               - estoqueDisponivelEletro
+ *               - estoqueDisponivelHipel
  *             properties:
  *               caixa:
  *                 type: number
@@ -91,6 +95,22 @@ router.patch('/:code/start', roomController.handleStartRoom)
  *                 type: number
  *                 description: Custo unitário de higiene/limpeza (obrigatório)
  *                 example: 8.90
+ *               estoqueDisponivelPereciveis:
+ *                 type: number
+ *                 description: Estoque disponível para compra na categoria Perecíveis (obrigatório)
+ *                 example: 1000
+ *               estoqueDisponivelMercearia:
+ *                 type: number
+ *                 description: Estoque disponível para compra na categoria Mercearia (obrigatório)
+ *                 example: 1000
+ *               estoqueDisponivelEletro:
+ *                 type: number
+ *                 description: Estoque disponível para compra na categoria Eletro (obrigatório)
+ *                 example: 1000
+ *               estoqueDisponivelHipel:
+ *                 type: number
+ *                 description: Estoque disponível para compra na categoria Hipel (obrigatório)
+ *                 example: 1000
  *               capexSegurancaValor:
  *                 type: number
  *                 default: 15000

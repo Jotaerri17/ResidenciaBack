@@ -46,18 +46,23 @@ model Room {
   impostoHipel      Float @default(17) 
 
 
-  custoUntPereciveis Float 
-  custoUntMercearia  Float 
-  custoUntEletro     Float 
-  custoUntHipel      Float 
+  custoUntPereciveis Float
+  custoUntMercearia  Float
+  custoUntEletro     Float
+  custoUntHipel      Float
 
-  capexSegurancaValor        Float @default(15000)
-  capexBalancaValor          Float @default(20000)
+  estoqueDisponivelPereciveis Float
+  estoqueDisponivelMercearia  Float
+  estoqueDisponivelEletro     Float
+  estoqueDisponivelHipel      Float
+
+  capexSegurancaValor        Float @default(50000)
+  capexBalancaValor          Float @default(75000)
   capexFreezerValor          Float @default(20000)
-  capexRedesValor            Float @default(18000)
-  capexSiteValor             Float @default(25000)
-  capexSelfCheckoutValor     Float @default(40000)
-  capexMelhoriaContinuaValor Float @default(12000)
+  capexRedesValor            Float @default(80000)
+  capexSiteValor             Float @default(65000)
+  capexSelfCheckoutValor     Float @default(80000)
+  capexMelhoriaContinuaValor Float @default(45000)
 
 
 
