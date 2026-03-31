@@ -16,12 +16,20 @@ async function handleCreateRoom(req, res) {
   capexSiteValor ,
   capexSelfCheckoutValor,
   capexMelhoriaContinuaValor,
+  estoqueDisponivelPereciveis,
+  estoqueDisponivelMercearia ,
+  estoqueDisponivelEletro   ,
+  estoqueDisponivelHipel   ,
     impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events} = req.body
 
     const room = await createRoom({ caixa, juros, totalRounds, quebrasPereciveis,
     quebrasMercearia, quebrasEletro,quebrasHipel,agingEletro,agingHipel,agingMercearia,agingPereciveis, 
     capexBalancaValor, capexFreezerValor, capexMelhoriaContinuaValor, capexRedesValor, capexSegurancaValor, capexSelfCheckoutValor, capexSiteValor,
     custoUntPereciveis, custoUntMercearia, custoUntHipel, custoUntEletro,
+    estoqueDisponivelPereciveis ,
+  estoqueDisponivelMercearia  ,
+  estoqueDisponivelEletro    ,
+  estoqueDisponivelHipel  ,
     impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events})
 
     return res.status(201).json({
