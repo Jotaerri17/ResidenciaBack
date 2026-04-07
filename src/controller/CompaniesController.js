@@ -1,5 +1,5 @@
 const prisma = require('../lib/prisma')
-const { joinRoom, getCompaniesByRoom, leaveRoom, getCompanySettings, updateRoundSettings } = require('../service/CompaniesService')
+const { joinRoom, getCompaniesByRoom, leaveRoom, getCompanySettings, } = require('../service/CompaniesService')
 
 async function handleJoinRoom(req, res) {
   try {
@@ -59,31 +59,6 @@ async function handleLeaveRoom(req, res) {
   }
 }
 
-async function handleUpdateRoundSettings(req, res) {
-  try {
-    const { id } = req.params; 
-    const settings = req.body; 
-
-    
-    const updatedCompany = await updateRoundSettings(id, settings);
-
-    return res.status(200).json({
-      message: 'Configurações da rodada salvas com sucesso!',
-      updatedCompany
-    });
-  } catch (error) {
-    
-    if (error.message === 'COMPANY_NOT_FOUND') {
-      return res.status(404).json({ message: 'Empresa não encontrada.' });
-    }
-    if (error.message === 'INSUFFICIENT_FUNDS') {
-      return res.status(400).json({ message: 'Saldo de caixa insuficiente para este investimento.' });
-    }
-    
-    console.error(error);
-    return res.status(500).json({ message: 'Erro ao salvar configurações da rodada.' });
-  }
-}
 
 async function handleGetCompanySettings(req, res) {
   try {
@@ -99,4 +74,4 @@ async function handleGetCompanySettings(req, res) {
   }
 }
 
-module.exports = { handleJoinRoom, handleGetCompanies, handleLeaveRoom, handleGetCompanySettings, handleUpdateRoundSettings }
+module.exports = { handleJoinRoom, handleGetCompanies, handleLeaveRoom, handleGetCompanySettings}

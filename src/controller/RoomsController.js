@@ -1,41 +1,44 @@
-const { createRoom, getRoomByCode, cancelRoom, startRoom }= require ('../service/RoomsService.js')
+const { createRoom, getRoomByCode, cancelRoom, startRoom } = require('../service/RoomsService.js')
+const prisma = require('../lib/prisma')
 
 
 async function handleCreateRoom(req, res) {
   try {
     const { caixa, juros, totalRounds, quebrasPereciveis,
-    quebrasMercearia, quebrasEletro,quebrasHipel,agingEletro,agingHipel,agingMercearia,agingPereciveis,
-     custoUntPereciveis,
-  custoUntMercearia,
-  custoUntEletro,
-  custoUntHipel,
-   capexSegurancaValor,
-  capexBalancaValor,
-  capexFreezerValor ,
-  capexRedesValor,
-  capexSiteValor ,
-  capexSelfCheckoutValor,
-  capexMelhoriaContinuaValor,
-  estoqueDisponivelPereciveis,
-  estoqueDisponivelMercearia ,
-  estoqueDisponivelEletro   ,
-  estoqueDisponivelHipel   ,
-    impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events} = req.body
+      quebrasMercearia, quebrasEletro, quebrasHipel, agingEletro, agingHipel, agingMercearia, agingPereciveis,
+      custoUntPereciveis,
+      custoUntMercearia,
+      custoUntEletro,
+      custoUntHipel,
+      capexSegurancaValor,
+      capexBalancaValor,
+      capexFreezerValor,
+      capexRedesValor,
+      capexSiteValor,
+      capexSelfCheckoutValor,
+      capexMelhoriaContinuaValor,
+      estoqueDisponivelPereciveis,
+      estoqueDisponivelMercearia,
+      estoqueDisponivelEletro,
+      estoqueDisponivelHipel,
+      impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events } = req.body
 
-    const room = await createRoom({ caixa, juros, totalRounds, quebrasPereciveis,
-    quebrasMercearia, quebrasEletro,quebrasHipel,agingEletro,agingHipel,agingMercearia,agingPereciveis, 
-    capexBalancaValor, capexFreezerValor, capexMelhoriaContinuaValor, capexRedesValor, capexSegurancaValor, capexSelfCheckoutValor, capexSiteValor,
-    custoUntPereciveis, custoUntMercearia, custoUntHipel, custoUntEletro,
-    estoqueDisponivelPereciveis ,
-  estoqueDisponivelMercearia  ,
-  estoqueDisponivelEletro    ,
-  estoqueDisponivelHipel  ,
-    impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events})
+    const room = await createRoom({
+      caixa, juros, totalRounds, quebrasPereciveis,
+      quebrasMercearia, quebrasEletro, quebrasHipel, agingEletro, agingHipel, agingMercearia, agingPereciveis,
+      capexBalancaValor, capexFreezerValor, capexMelhoriaContinuaValor, capexRedesValor, capexSegurancaValor, capexSelfCheckoutValor, capexSiteValor,
+      custoUntPereciveis, custoUntMercearia, custoUntHipel, custoUntEletro,
+      estoqueDisponivelPereciveis,
+      estoqueDisponivelMercearia,
+      estoqueDisponivelEletro,
+      estoqueDisponivelHipel,
+      impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events
+    })
 
     return res.status(201).json({
       message: 'Sala criada com sucesso!',
       room,
-      facilitadorToken: room.facilitadorToken
+      facilitadorToken: room.facilitatorToken
     })
   } catch (error) {
     console.error(error)
@@ -126,4 +129,105 @@ async function handleStartRoom(req, res) {
   }
 }
 
-module.exports = {handleCreateRoom, handleGetRoom, handleCancelRoom, handleStartRoom}
+
+async function handleGetRank(req, res) {
+  try {
+    const { code, round } = req.params
+
+    const rank = await prisma.roundResult.findMany({
+      where: {
+        round: parseInt(round),
+        company: { room: { code } }
+      },
+      select: {
+        id: true,
+        round: true,
+        receitaTotal: true,
+        company: {
+          select: {
+            name: true,
+            managerName: true,
+          }
+        }
+      },
+      orderBy: {
+        receitaTotal: 'desc'
+      }
+    })
+
+    return res.status(200).json(rank)
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao buscar ranking.' })
+  }
+}
+
+async function handleGetResultado(req, res) {
+  try {
+    const { code, round } = req.params
+    const facilitatorToken = req.headers['x-facilitator-token']
+
+    if (!facilitatorToken) {
+      return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
+    }
+
+    const room = await prisma.room.findUnique({ where: { code } })
+
+    if (!room) {
+      return res.status(404).json({ message: 'Sala não encontrada.' })
+    }
+
+    if (room.facilitatorToken !== facilitatorToken) {
+      return res.status(403).json({ message: 'Acesso negado.' })
+    }
+
+    const resultado = await prisma.roundResult.findMany({
+      where: {
+        round: parseInt(round),
+        company: { room: { code } }
+      },
+      include: {
+        
+        company: {
+          select: {
+            name: true,
+            managerName: true,
+            caixa: true,
+            configs: {
+              where: { round: parseInt(round) },
+              select: {
+                estoquePereciveis: true,
+                estoqueMercearia: true,
+                estoqueEletro: true,
+                estoqueHipel: true,
+                margemPereciveis: true,
+                margemMercearia: true,
+                margemEletro: true,
+                margemHipel: true,
+                operadoresVenda: true,
+                operadoresServico: true,
+                capexSeguranca: true,
+                capexBalanca: true,
+                capexRedes: true,
+                capexSite: true,
+                capexSelfCheckout: true,
+                capexMelhoriaContinua: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        receitaTotal: 'desc'
+      }
+    })
+
+    return res.status(200).json(resultado)
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao buscar resultado.' })
+  }
+}
+
+
+module.exports = { handleCreateRoom, handleGetRoom, handleCancelRoom, handleStartRoom, handleGetRank, handleGetResultado }

@@ -56,6 +56,9 @@ model Room {
   estoqueDisponivelEletro     Float
   estoqueDisponivelHipel      Float
 
+  demandaEstqRounds Float []
+
+
   capexSegurancaValor        Float @default(50000)
   capexBalancaValor          Float @default(75000)
   capexFreezerValor          Float @default(20000)
@@ -93,6 +96,7 @@ model Company {
 
   room        Room     @relation(fields: [roomId], references: [id])
   configs     CompanyConfig[]
+  RoundResults RoundResult[]
 
   createdAt   DateTime @default(now())
 }
@@ -128,7 +132,42 @@ model CompanyConfig {
 
   @@unique([companyId, round])
 }
+model RoundResult {
+  id        String  @id @default(uuid())
+  companyId String
+  round     Int
 
+  qtdVendidaPereciveis Float @default(0)
+  qtdVendidaMercearia  Float @default(0)
+  qtdVendidaEletro     Float @default(0)
+  qtdVendidaHipel      Float @default(0)
+
+  deixouDeVenderPereciveis Float @default(0)
+  deixouDeVenderMercearia  Float @default(0)
+  deixouDeVenderEletro     Float @default(0)
+  deixouDeVenderHipel      Float @default(0)
+
+  receitaPereciveis Float @default(0)
+  receitaMercearia  Float @default(0)
+  receitaEletro     Float @default(0)
+  receitaHipel      Float @default(0)
+
+  receitaTotal      Float @default(0)
+
+  precoMedioCesta       Float @default(0)
+  disponibilidade       Float @default(0)
+  csat                  Float @default(0)
+  percentualDemanda     Float @default(0)
+  precoMedioCestaPontos Int   @default(0)
+  disponibilidadePontos Int   @default(0)
+  csatPontos            Int   @default(0)
+  pontosTotais          Int   @default(0)
+
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, round])
+}
 enum RoomStatus {
   WAITING
   IN_PROGRESS
