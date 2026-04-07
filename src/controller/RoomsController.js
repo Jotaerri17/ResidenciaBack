@@ -21,6 +21,7 @@ async function handleCreateRoom(req, res) {
       estoqueDisponivelMercearia,
       estoqueDisponivelEletro,
       estoqueDisponivelHipel,
+      demandaEstqRounds,
       impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events } = req.body
 
     const room = await createRoom({
@@ -32,6 +33,7 @@ async function handleCreateRoom(req, res) {
       estoqueDisponivelMercearia,
       estoqueDisponivelEletro,
       estoqueDisponivelHipel,
+      demandaEstqRounds,
       impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events
     })
 
