@@ -47,10 +47,19 @@ app.get('/', (req, res) => {
 })
 
 prisma.$connect()
-  .then(() => console.log('✅ Conectado ao banco!'))
+  .then(() => {
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('✅ Conectado ao banco!')
+    }
+  })
   .catch((err) => console.error('❌ Erro na conexão:', err.message))
 
-const PORT = process.env.PORT || 3000
-server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`)
-})
+// Só sobe o servidor se NÃO estiver em teste
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`)
+  })
+}
+
+// Exporta para os testes usarem
+module.exports = app

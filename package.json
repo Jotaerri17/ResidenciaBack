@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "dev": "nodemon src/app.js",
+  "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles",
+  "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -23,7 +24,10 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.3.0",
     "nodemon": "^3.1.14",
-    "prisma": "^7.5.0"
+    "prisma": "^7.5.0",
+    "supertest": "^7.2.2"
   }
 }
