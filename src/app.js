@@ -46,11 +46,15 @@ app.get('/', (req, res) => {
   res.json({ mensagem: "🚀 API Express funcionando!" })
 })
 
-prisma.$connect()
-  .then(() => console.log('✅ Conectado ao banco!'))
-  .catch((err) => console.error('❌ Erro na conexão:', err.message))
+if (process.env.NODE_ENV !== 'test') {
+  prisma.$connect()
+    .then(() => console.log('✅ Conectado ao banco!'))
+    .catch((err) => console.error('❌ Erro na conexão:', err.message))
 
-const PORT = process.env.PORT || 3000
-server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`)
-})
+  const PORT = process.env.PORT || 3000
+  server.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`)
+  })
+}
+
+module.exports = app
