@@ -75,8 +75,47 @@ async function createRoundResultInDb(companyId, round, overrides = {}) {
   });
 }
 
+/**
+ * Payload mínimo para POST /companies/join.
+ */
+function buildJoinPayload(overrides = {}) {
+  return {
+    name: 'Empresa Teste',
+    managerName: 'Gerente Teste',
+    ...overrides,
+  };
+}
+
+/**
+ * Payload mínimo para POST /companies/:id/configs.
+ * Todos os campos têm defaults conservadores (custo baixo).
+ */
+function buildConfigPayload(overrides = {}) {
+  return {
+    estoquePereciveis: 100,
+    estoqueMercearia: 200,
+    estoqueEletro: 10,
+    estoqueHipel: 50,
+    margemPereciveis: 20,
+    margemMercearia: 15,
+    margemEletro: 30,
+    margemHipel: 25,
+    operadoresVenda: 3,
+    operadoresServico: 2,
+    capexSeguranca: false,
+    capexBalanca: false,
+    capexRedes: false,
+    capexSite: false,
+    capexSelfCheckout: false,
+    capexMelhoriaContinua: false,
+    ...overrides,
+  };
+}
+
 module.exports = {
   buildRoomPayload,
+  buildJoinPayload,
+  buildConfigPayload,
   createRoomInDb,
   createCompanyInDb,
   createRoundResultInDb,
