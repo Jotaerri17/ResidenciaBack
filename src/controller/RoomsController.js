@@ -182,10 +182,30 @@ async function handleGetRank(req, res) {
           receitaPereciveis: true,
           receitaMercearia: true,
           receitaHipel: true,
-          receitaEletro: true
+          receitaEletro: true,
+          receitaTotal: true,
 
         }
       })
+    }
+    if (meuResultado) {
+      const receitaBruta =
+        meuResultado.receitaPereciveis +
+        meuResultado.receitaMercearia +
+        meuResultado.receitaEletro +
+        meuResultado.receitaHipel
+      
+      const valorPenalidade = receitaBruta - meuResultado.receitaTotal
+
+      const percentualPenalidade = 
+        receitaBruta > 0 ? (valorPenalidade / receitaBruta) * 100 : 0
+
+      meuResultado = {
+        ...meuResultado,
+        receitaBruta,
+        valorPenalidade,
+        percentualPenalidade,
+      }
     }
 
     return res.status(200).json({ rank, meuResultado })

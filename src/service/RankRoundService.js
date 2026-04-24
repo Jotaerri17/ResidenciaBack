@@ -1,4 +1,11 @@
 const prisma = require('../lib/prisma')
+
+const EVENTO_CAPEX_MAP = {
+  EQUIPMENT_FAILURE: 'capexBalanca',
+  SYSTEM_FAILURE: 'capexRedes',
+  OTHER: 'capexMelhoriaContinua',
+};
+
 /**
  * @param {any[]} demanda
  * @param {string} roomCode
@@ -7,8 +14,10 @@ const prisma = require('../lib/prisma')
 
 async function calcularRankRound(demanda, roomCode, round) {
     const room = await prisma.room.findUnique({
-        where: { code: roomCode }
-    })
+        where: { code: roomCode },
+        include: { events: true}
+    });
+    const eventosRodada = room.events.filter(ev => ev.round === round);
     const percentualRound = room.demandaEstqRounds[round - 1] / 100
 
     const totalVendaPereciveis = room.estoqueDisponivelPereciveis * percentualRound
@@ -60,6 +69,18 @@ async function calcularRankRound(demanda, roomCode, round) {
             const receitaHipel = qtdVendidaHipel * item.precoVendaHipel
 
             const receitaTotal = receitaPereciveis + receitaMercearia + receitaEletro + receitaHipel
+
+            // Penalidade por eventos sem CAPEX
+            let penalidade = 0;
+            eventosRodada.forEach(evento => {
+            const capexField = EVENTO_CAPEX_MAP[evento.type]; 
+
+            if (capexField && !item.config[capexField]) {
+                penalidade += 0.1; // Exemplo: 10% PERGUNTAR SE É EDITAVEL OU FIXO E VALOR
+            }
+            });
+            const receitaTotalComPenalidade = receitaTotal * (1 - penalidade);
+
             const r2 = (n) => parseFloat(n.toFixed(2))
             await prisma.roundResult.create({
                 data: {
@@ -77,7 +98,7 @@ async function calcularRankRound(demanda, roomCode, round) {
                     receitaMercearia:          r2(receitaMercearia),
                     receitaEletro:             r2(receitaEletro),
                     receitaHipel:              r2(receitaHipel),
-                    receitaTotal:              r2(receitaTotal),
+                    receitaTotal:              r2(receitaTotalComPenalidade),
                     precoMedioCesta:           r2(item.precoMedioCesta),
                     disponibilidade:           r2(item.disponibilidade),
                     csat:                      r2(item.csat),
@@ -115,7 +136,7 @@ async function calcularRankRound(demanda, roomCode, round) {
                 receitaMercearia,
                 receitaEletro,
                 receitaHipel,
-                receitaTotal,
+                receitaTotal: receitaTotalComPenalidade,
             }
             })
     )
