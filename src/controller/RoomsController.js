@@ -68,7 +68,7 @@ async function handleCancelRoom(req, res) {
   try {
     const io = req.app.get('io')
     const { code } = req.params
-    const facilitatorToken = req.headers['x-facilitador-token']
+    const facilitatorToken = req.headers['x-facilitator-token']
 
     if (!facilitatorToken) {
       return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
