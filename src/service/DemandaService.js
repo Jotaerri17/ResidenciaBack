@@ -19,7 +19,6 @@ async function calcularDemanda(code, round) {
         const config = empresa.configs[0]
 
         // preco medio da cesta
-
         const precoVendaPereciveis = room.custoUntPereciveis * (1 + config.margemPereciveis / 100)
         const precoVendaMercearia = room.custoUntMercearia * (1 + config.margemMercearia / 100)
         const precoVendaEletro = room.custoUntEletro * (1 + config.margemEletro / 100)
@@ -93,7 +92,7 @@ async function calcularDemanda(code, round) {
             item.disponibilidadePontos +
             item.csatPontos
     }))
-
+    
     const somaTotalPontos = comPontosTotais.reduce(
         (acc, item) => acc + item.pontosTotais, 0
     )
