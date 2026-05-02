@@ -29,6 +29,15 @@ async function handleSaveConfig(req, res) {
         message: 'Configuracao ja enviada para este round.'
       })
 
+    if (error.message === 'INVALID_STOCK_VALUE')
+      return res.status(400).json({ message: 'Valores de estoque não podem ser negativos.' })
+
+    if (error.message === 'INVALID_MARGEM_VALUE')
+      return res.status(400).json({ message: 'Valores de margem não podem ser negativos.' })
+
+    if (error.message === 'INVALID_OPERADORES_VALUE')
+      return res.status(400).json({ message: 'Quantidade de operadores não pode ser negativa.' })
+
     return res.status(500).json({ message: 'Erro ao salvar configuracao.' })
   }
 }

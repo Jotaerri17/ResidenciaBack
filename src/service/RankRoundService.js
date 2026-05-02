@@ -18,7 +18,11 @@ async function calcularRankRound(demanda, roomCode, round) {
         include: { events: true}
     });
     const eventosRodada = room.events.filter(ev => ev.round === round);
-    const percentualRound = room.demandaEstqRounds[round - 1] / 100
+    // Fallback para 100% se o array não tiver valor definido para esta rodada
+    const demandaRaw = Array.isArray(room.demandaEstqRounds)
+      ? (room.demandaEstqRounds[round - 1] ?? 100)
+      : 100
+    const percentualRound = demandaRaw / 100
 
     const totalVendaPereciveis = room.estoqueDisponivelPereciveis * percentualRound
     const totalVendaMercearia = room.estoqueDisponivelMercearia * percentualRound

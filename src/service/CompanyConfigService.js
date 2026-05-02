@@ -55,6 +55,33 @@ async function saveConfig({ companyId, ...configData }, io) {
     throw new Error('ALREADY_CONFIGURED')
   }
 
+  // Validação: estoque não pode ser negativo
+  const camposEstoque = ['estoquePereciveis', 'estoqueMercearia', 'estoqueEletro', 'estoqueHipel']
+  for (const campo of camposEstoque) {
+    const valor = configData[campo]
+    if (valor !== undefined && valor < 0) {
+      throw new Error('INVALID_STOCK_VALUE')
+    }
+  }
+
+  // Validação: margem não pode ser negativa
+  const camposMargem = ['margemPereciveis', 'margemMercearia', 'margemEletro', 'margemHipel']
+  for (const campo of camposMargem) {
+    const valor = configData[campo]
+    if (valor !== undefined && valor < 0) {
+      throw new Error('INVALID_MARGEM_VALUE')
+    }
+  }
+
+  // Validação: operadores não podem ser negativos
+  const camposOperadores = ['operadoresVenda', 'operadoresServico']
+  for (const campo of camposOperadores) {
+    const valor = configData[campo]
+    if (valor !== undefined && valor < 0) {
+      throw new Error('INVALID_OPERADORES_VALUE')
+    }
+  }
+
   // Débito do caixa
   const capexCatalog = {
     capexSeguranca: room.capexSegurancaValor,

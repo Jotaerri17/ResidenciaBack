@@ -7,6 +7,8 @@ router.post('/', roomController.handleCreateRoom)       // criar sala
 router.get('/:code', roomController.handleGetRoom)  // buscar sala pelo código
 router.patch('/:code/cancel', roomController.handleCancelRoom) // cancela a sala
 router.patch('/:code/start', roomController.handleStartRoom)
+router.patch('/:code/next-round', roomController.handleNextRound)
+router.patch('/:code/finish', roomController.handleFinishGame)
 router.get('/:code/rank/:round', roomController.handleGetRank)
 router.get('/:code/resultado/:round', roomController.handleGetResultado)
 

@@ -129,4 +129,115 @@ async function startRoom({ code, facilitatorToken }, io) {
   return updatedRoom
 }
 
-module.exports = {createRoom, getRoomByCode, cancelRoom, startRoom}
+async function nextRound({ code, facilitatorToken }, io) {
+  // First fetch to read currentRound (needed to filter configs)
+  const roomBasic = await prisma.room.findUnique({ where: { code } })
+
+  if (!roomBasic) throw new Error('ROOM_NOT_FOUND')
+  if (roomBasic.facilitatorToken !== facilitatorToken) throw new Error('UNAUTHORIZED')
+  if (roomBasic.status !== 'IN_PROGRESS') throw new Error('ROOM_NOT_IN_PROGRESS')
+  if (roomBasic.currentRound >= roomBasic.totalRounds) throw new Error('ALREADY_LAST_ROUND')
+
+  // Second fetch: include companies with configs for the current round
+  const roomWithConfigs = await prisma.room.findUnique({
+    where: { code },
+    include: {
+      companies: {
+        include: {
+          configs: { where: { round: roomBasic.currentRound } }
+        }
+      }
+    }
+  })
+
+  const empresasStatus = roomWithConfigs.companies.map(company => ({
+    companyId: company.id,
+    companyName: company.name,
+    managerName: company.managerName,
+    confirmou: company.configs.length > 0
+  }))
+
+  const updatedRoom = await prisma.room.update({
+    where: { code },
+    data: { currentRound: roomWithConfigs.currentRound + 1 }
+  })
+
+  io.to(code).emit('round_advanced', {
+    previousRound: roomWithConfigs.currentRound,
+    currentRound: updatedRoom.currentRound,
+    empresasStatus
+  })
+
+  return { room: updatedRoom, empresasStatus }
+}
+
+async function finishGame({ code, facilitatorToken }, io) {
+  const room = await prisma.room.findUnique({
+    where: { code },
+    include: {
+      companies: {
+        include: { RoundResults: true }
+      }
+    }
+  })
+
+  if (!room) throw new Error('ROOM_NOT_FOUND')
+  if (room.facilitatorToken !== facilitatorToken) throw new Error('UNAUTHORIZED')
+  if (room.status !== 'IN_PROGRESS') throw new Error('ROOM_NOT_IN_PROGRESS')
+
+  await prisma.room.update({
+    where: { code },
+    data: { status: 'FINISHED' }
+  })
+
+  const rankingGeral = room.companies
+    .map(company => ({
+      companyId: company.id,
+      companyName: company.name,
+      managerName: company.managerName,
+      receitaAcumulada: company.RoundResults.reduce(
+        (sum, rr) => sum + rr.receitaTotal, 0
+      )
+    }))
+    .sort((a, b) => b.receitaAcumulada - a.receitaAcumulada)
+
+  const resultadosPorRodada = []
+  for (let r = 1; r <= room.totalRounds; r++) {
+    const resultadosRound = room.companies
+      .flatMap(company =>
+        company.RoundResults
+          .filter(rr => rr.round === r)
+          .map(rr => ({
+            companyId: company.id,
+            companyName: company.name,
+            managerName: company.managerName,
+            receitaTotal: rr.receitaTotal
+          }))
+      )
+      .sort((a, b) => b.receitaTotal - a.receitaTotal)
+
+    if (resultadosRound.length === 0) {
+      resultadosPorRodada.push({ round: r, vencedor: null, discrepancia: null, resultados: [] })
+      continue
+    }
+
+    const primeiro = resultadosRound[0]
+    const ultimo = resultadosRound[resultadosRound.length - 1]
+    const discrepancia = primeiro.receitaTotal > 0
+      ? parseFloat(((primeiro.receitaTotal - ultimo.receitaTotal) / primeiro.receitaTotal * 100).toFixed(2))
+      : 0
+
+    resultadosPorRodada.push({
+      round: r,
+      vencedor: { companyId: primeiro.companyId, companyName: primeiro.companyName, receitaTotal: primeiro.receitaTotal },
+      discrepancia,
+      resultados: resultadosRound
+    })
+  }
+
+  io.to(code).emit('game_finished', { rankingGeral, resultadosPorRodada })
+
+  return { rankingGeral, resultadosPorRodada }
+}
+
+module.exports = { createRoom, getRoomByCode, cancelRoom, startRoom, nextRound, finishGame }

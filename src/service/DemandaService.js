@@ -1,6 +1,12 @@
 const { config } = require('dotenv')
 const prisma = require('../lib/prisma')
 
+// safeDiv: evita divisão por zero. Se divisor for 0, retorna 0.
+function safeDiv(numerador, divisor) {
+  if (!divisor || divisor === 0) return 0
+  return numerador / divisor
+}
+
 async function calcularDemanda(code, round) {
     const room = await prisma.room.findUnique({
         where: { code }
@@ -33,10 +39,10 @@ async function calcularDemanda(code, round) {
         ) / 4
 
         // disponibilidade 
-        const disponibilidadePereciveis = config.estoquePereciveis / room.estoqueDisponivelPereciveis
-        const disponibilidadeMercearia = config.estoqueMercearia / room.estoqueDisponivelMercearia
-        const disponibilidadeEletro = config.estoqueEletro / room.estoqueDisponivelEletro
-        const disponibilidadeHipel = config.estoqueHipel / room.estoqueDisponivelHipel
+        const disponibilidadePereciveis = safeDiv(config.estoquePereciveis, room.estoqueDisponivelPereciveis)
+        const disponibilidadeMercearia  = safeDiv(config.estoqueMercearia,  room.estoqueDisponivelMercearia)
+        const disponibilidadeEletro     = safeDiv(config.estoqueEletro,     room.estoqueDisponivelEletro)
+        const disponibilidadeHipel      = safeDiv(config.estoqueHipel,      room.estoqueDisponivelHipel)
 
         const disponibilidade = (
             disponibilidadePereciveis +
@@ -107,7 +113,7 @@ async function calcularDemanda(code, round) {
         disponibilidadePontos: item.disponibilidadePontos,
         csatPontos: item.csatPontos,
         pontosTotais: item.pontosTotais,
-        percentualDemanda: parseFloat((item.pontosTotais / somaTotalPontos).toFixed(2)),
+        percentualDemanda: parseFloat(safeDiv(item.pontosTotais, somaTotalPontos).toFixed(2)),
 
         precoVendaPereciveis: parseFloat(item.precoVendaPereciveis.toFixed(2)),
         precoVendaMercearia: parseFloat(item.precoVendaMercearia.toFixed(2)),

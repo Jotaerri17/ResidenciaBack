@@ -1,4 +1,4 @@
-const { createRoom, getRoomByCode, cancelRoom, startRoom } = require('../service/RoomsService.js')
+const { createRoom, getRoomByCode, cancelRoom, startRoom, nextRound, finishGame } = require('../service/RoomsService.js')
 const prisma = require('../lib/prisma')
 
 
@@ -283,4 +283,73 @@ async function handleGetResultado(req, res) {
 }
 
 
-module.exports = { handleCreateRoom, handleGetRoom, handleCancelRoom, handleStartRoom, handleGetRank, handleGetResultado }
+async function handleNextRound(req, res) {
+  try {
+    const { code } = req.params
+    const facilitatorToken = req.headers['x-facilitator-token']
+    const io = req.app.get('io')
+
+    if (!facilitatorToken) {
+      return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
+    }
+
+    const result = await nextRound({ code, facilitatorToken }, io)
+
+    return res.status(200).json({
+      message: 'Rodada avançada com sucesso!',
+      ...result
+    })
+
+  } catch (error) {
+    if (error.message === 'ROOM_NOT_FOUND')
+      return res.status(404).json({ message: 'Sala não encontrada.' })
+    if (error.message === 'UNAUTHORIZED')
+      return res.status(403).json({ message: 'Acesso negado.' })
+    if (error.message === 'ROOM_NOT_IN_PROGRESS')
+      return res.status(400).json({ message: 'O jogo não está em andamento.' })
+    if (error.message === 'ALREADY_LAST_ROUND')
+      return res.status(400).json({ message: 'Já está na última rodada. Use o endpoint de encerrar.' })
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao avançar rodada.' })
+  }
+}
+
+async function handleFinishGame(req, res) {
+  try {
+    const { code } = req.params
+    const facilitatorToken = req.headers['x-facilitator-token']
+    const io = req.app.get('io')
+
+    if (!facilitatorToken) {
+      return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
+    }
+
+    const result = await finishGame({ code, facilitatorToken }, io)
+
+    return res.status(200).json({
+      message: 'Jogo encerrado com sucesso!',
+      ...result
+    })
+
+  } catch (error) {
+    if (error.message === 'ROOM_NOT_FOUND')
+      return res.status(404).json({ message: 'Sala não encontrada.' })
+    if (error.message === 'UNAUTHORIZED')
+      return res.status(403).json({ message: 'Acesso negado.' })
+    if (error.message === 'ROOM_NOT_IN_PROGRESS')
+      return res.status(400).json({ message: 'O jogo não está em andamento.' })
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao encerrar jogo.' })
+  }
+}
+
+module.exports = {
+  handleCreateRoom,
+  handleGetRoom,
+  handleCancelRoom,
+  handleStartRoom,
+  handleGetRank,
+  handleGetResultado,
+  handleNextRound,
+  handleFinishGame
+}
