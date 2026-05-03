@@ -35,6 +35,7 @@ async function handleCreateRoom(req, res) {
       estoqueDisponivelHipel,
       demandaEstqRounds,
       impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events
+      
     })
 
     return res.status(201).json({
@@ -136,18 +137,22 @@ async function handleGetRank(req, res) {
   try {
     const { code, round } = req.params
     const companyId = req.query.companyId || req.query.companyID
+    const roundNumber = parseInt(round, 10)
 
     const rank = await prisma.roundResult.findMany({
       where: {
-        round: parseInt(round),
+        round: roundNumber,
         company: { room: { code } }
       },
       select: {
+        id: true,
+        companyId: true,
         round: true,
         receitaTotal: true,
+        pontosTotais: true,
         company: {
           select: {
-            id:true,
+            id: true,
             name: true,
             managerName: true,
           }
@@ -159,11 +164,11 @@ async function handleGetRank(req, res) {
     })
     let meuResultado = null 
     if(companyId) {
-      meuResultado = await prisma.roundResult.findUnique({
+      const baseResultado = await prisma.roundResult.findUnique({
         where: {
           companyId_round: {
             companyId,
-            round: parseInt(round)
+            round: roundNumber
           }
         },
         select: {
@@ -184,30 +189,27 @@ async function handleGetRank(req, res) {
           receitaHipel: true,
           receitaEletro: true,
           receitaTotal: true,
+          diasSemVenda: true,
+          eventosAplicados: true,
+          valorPenalidade: true,
 
         }
       })
-    }
-    if (meuResultado) {
-      const receitaBruta =
-        meuResultado.receitaPereciveis +
-        meuResultado.receitaMercearia +
-        meuResultado.receitaEletro +
-        meuResultado.receitaHipel
-      
-      const valorPenalidade = receitaBruta - meuResultado.receitaTotal
 
-      const percentualPenalidade = 
-        receitaBruta > 0 ? (valorPenalidade / receitaBruta) * 100 : 0
+      if (baseResultado) {
+        const valorPenalidade = baseResultado.valorPenalidade || 0
+        const receitaBruta = (baseResultado.receitaTotal || 0) + valorPenalidade
+        const percentualPenalidade = receitaBruta > 0
+          ? (valorPenalidade / receitaBruta) * 100
+          : 0
 
-      meuResultado = {
-        ...meuResultado,
-        receitaBruta,
-        valorPenalidade,
-        percentualPenalidade,
+        meuResultado = {
+          ...baseResultado,
+          receitaBruta,
+          percentualPenalidade
+        }
       }
     }
-
     return res.status(200).json({ rank, meuResultado })
   } catch (error) {
     console.error(error)
@@ -264,7 +266,7 @@ async function handleGetResultado(req, res) {
                 capexRedes: true,
                 capexSite: true,
                 capexSelfCheckout: true,
-                capexMelhoriaContinua: true,
+                capexMelhoriaContinua: true
               }
             }
           }

@@ -206,7 +206,7 @@ router.delete('/:id/leave', handleLeaveRoom)
  *               marginHipel:
  *                 type: number
  *                 example: 25
- *               operadoresCaixa:
+ *               operadoresVenda:
  *                 type: integer
  *                 example: 3
  *               operadoresServico:

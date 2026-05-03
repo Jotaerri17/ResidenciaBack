@@ -163,6 +163,10 @@ model RoundResult {
   csatPontos            Int   @default(0)
   pontosTotais          Int   @default(0)
 
+  diasSemVenda    Int?
+  eventosAplicados Json?
+  valorPenalidade Float?
+
   company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
 
@@ -179,4 +183,10 @@ enum EventType {
   EQUIPMENT_FAILURE
   SYSTEM_FAILURE
   OTHER
+  SEGURANCA
+  BALANCA_FREEZER
+  REDES
+  SITE
+  SELF_CHECKOUT
+  MELHORIA_CONTINUA
 }

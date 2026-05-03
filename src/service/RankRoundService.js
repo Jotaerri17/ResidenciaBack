@@ -1,9 +1,76 @@
-const prisma = require('../lib/prisma')
+const prisma = require('../lib/prisma');
+//const item = require('../models/item');
+const { get } = require('../routes/RoomsRoutes');
+
+function obterSlaDiasPorOperadores(operadoresServico) {
+    
+    if (operadoresServico <= 0) return 6;
+    if (operadoresServico === 1) return 5;
+    if (operadoresServico === 2) return 4;
+    if (operadoresServico === 3) return 3;
+    if (operadoresServico === 4) return 2;
+
+    return 1;
+    
+}
+
+function calcularDiasSemVenda(eventosRodada, configEmpresa) {
+    const slaDias = obterSlaDiasPorOperadores(configEmpresa.operadoresServico);
+    let diasSemVenda = 0;
+
+    eventosRodada.forEach((evento) => {
+       const capexField = EVENTO_CAPEX_MAP[evento.type];
+       const diasBase = CAPEX_DIAS_BASE_MAP[capexField] ?? 0; 
+         if (capexField && diasBase > 0 && !configEmpresa[capexField]) {
+            diasSemVenda += slaDias + diasBase;
+        }
+    
+    });
+    
+    return diasSemVenda;
+}
+
+function calcularFatorPenalidade(diasSemVenda, diasReferencia) {
+    if (diasReferencia <= 0) return 0;
+    return Math.min(1, Math.max(0, diasSemVenda / diasReferencia));
+}
+
+function calcularVendaComPenalidade(demandaPotencial, estoque, preco, fatorPenalidade) {
+    const qtdVendidaSemPenalidade = Math.min(demandaPotencial, estoque);
+    const descontoUnidades = qtdVendidaSemPenalidade * fatorPenalidade;
+    const qtdVendida = Math.max(0, qtdVendidaSemPenalidade - descontoUnidades);
+    const deixouDeVender = Math.max(0, demandaPotencial - qtdVendida);
+    const receita = qtdVendida * preco;
+    const receitaSemPenalidade = qtdVendidaSemPenalidade * preco;
+
+    return {
+        qtdVendida,
+        deixouDeVender,
+        receita,
+        receitaSemPenalidade,
+    };
+}
+
+// Fator relativo da penalidade sobre o volume da rodada (configurável por ambiente).
+const DIAS_REFERENCIA_PENALIDADE = Number(process.env.DIAS_REFERENCIA_PENALIDADE || 30);
+
+
+const CAPEX_DIAS_BASE_MAP = {
+    capexSeguranca: 2,
+    capexBalanca: 1,
+    capexRedes: 2,
+    capexSite: 1,
+    capexSelfCheckout: 2,
+    capexMelhoriaContinua: 0,
+}
 
 const EVENTO_CAPEX_MAP = {
-  EQUIPMENT_FAILURE: 'capexBalanca',
-  SYSTEM_FAILURE: 'capexRedes',
-  OTHER: 'capexMelhoriaContinua',
+    SEGURANCA: 'capexSeguranca',
+    BALANCA_FREEZER: 'capexBalanca',
+    REDES: 'capexRedes',
+    SITE: 'capexSite',
+    SELF_CHECKOUT: 'capexSelfCheckout',
+    MELHORIA_CONTINUA: 'capexMelhoriaContinua',
 };
 
 /**
@@ -17,6 +84,9 @@ async function calcularRankRound(demanda, roomCode, round) {
         where: { code: roomCode },
         include: { events: true}
     });
+    if (!room) {
+        throw new Error('Sala não encontrada');
+    }
     const eventosRodada = room.events.filter(ev => ev.round === round);
     const percentualRound = room.demandaEstqRounds[round - 1] / 100
 
@@ -27,59 +97,72 @@ async function calcularRankRound(demanda, roomCode, round) {
 
     const resultado = await Promise.all(
         demanda.map(async item => {
+            const diasSemVenda = calcularDiasSemVenda(eventosRodada, item.config);
+            const fatorPenalidade = calcularFatorPenalidade(diasSemVenda, DIAS_REFERENCIA_PENALIDADE);
+            
+            const demandaPotencialPereciveis = totalVendaPereciveis * item.percentualDemanda;
+            const demandaPotencialMercearia = totalVendaMercearia * item.percentualDemanda;
+            const demandaPotencialEletro = totalVendaEletro * item.percentualDemanda;
+            const demandaPotencialHipel = totalVendaHipel * item.percentualDemanda;
 
-            const qtdVendidaPereciveis = Math.min(
-                totalVendaPereciveis * item.percentualDemanda,
-                item.config.estoquePereciveis
-            )
-            const qtdVendidaMercearia = Math.min(
-                totalVendaMercearia * item.percentualDemanda,
-                item.config.estoqueMercearia
-            )
-            const qtdVendidaEletro = Math.min(
-                totalVendaEletro * item.percentualDemanda,
-                item.config.estoqueEletro
-            )
-            const qtdVendidaHipel = Math.min(
-                totalVendaHipel * item.percentualDemanda,
-                item.config.estoqueHipel
-            )
+            const vendaPereciveis = calcularVendaComPenalidade(
+                demandaPotencialPereciveis,
+                item.config.estoquePereciveis,
+                item.precoVendaPereciveis,
+                fatorPenalidade
+            );
+            const vendaMercearia = calcularVendaComPenalidade(
+                demandaPotencialMercearia,
+                item.config.estoqueMercearia,
+                item.precoVendaMercearia,
+                fatorPenalidade
+            );
+            const vendaEletro = calcularVendaComPenalidade(
+                demandaPotencialEletro,
+                item.config.estoqueEletro,
+                item.precoVendaEletro,
+                fatorPenalidade
+            );
+            const vendaHipel = calcularVendaComPenalidade(
+                demandaPotencialHipel,
+                item.config.estoqueHipel,
+                item.precoVendaHipel,
+                fatorPenalidade
+            );
 
-            // nao vendeu 
-            const deixouDeVenderPereciveis = Math.max(
-                0,
-                (totalVendaPereciveis * item.percentualDemanda) - item.config.estoquePereciveis
-            )
-            const deixouDeVenderMercearia = Math.max(
-                0,
-                (totalVendaMercearia * item.percentualDemanda) - item.config.estoqueMercearia
-            )
-            const deixouDeVenderEletro = Math.max(
-                0,
-                (totalVendaEletro * item.percentualDemanda) - item.config.estoqueEletro
-            )
-            const deixouDeVenderHipel = Math.max(
-                0,
-                (totalVendaHipel * item.percentualDemanda) - item.config.estoqueHipel
-            )
-            // receita
-            const receitaPereciveis = qtdVendidaPereciveis * item.precoVendaPereciveis
-            const receitaMercearia = qtdVendidaMercearia * item.precoVendaMercearia
-            const receitaEletro = qtdVendidaEletro * item.precoVendaEletro
-            const receitaHipel = qtdVendidaHipel * item.precoVendaHipel
+            const qtdVendidaPereciveis = vendaPereciveis.qtdVendida;
+            const qtdVendidaMercearia = vendaMercearia.qtdVendida;
+            const qtdVendidaEletro = vendaEletro.qtdVendida;
+            const qtdVendidaHipel = vendaHipel.qtdVendida;
 
-            const receitaTotal = receitaPereciveis + receitaMercearia + receitaEletro + receitaHipel
+            const deixouDeVenderPereciveis = vendaPereciveis.deixouDeVender;
+            const deixouDeVenderMercearia = vendaMercearia.deixouDeVender;
+            const deixouDeVenderEletro = vendaEletro.deixouDeVender;
+            const deixouDeVenderHipel = vendaHipel.deixouDeVender;
 
-            // Penalidade por eventos sem CAPEX
-            let penalidade = 0;
+            const receitaPereciveis = vendaPereciveis.receita;
+            const receitaMercearia = vendaMercearia.receita;
+            const receitaEletro = vendaEletro.receita;
+            const receitaHipel = vendaHipel.receita;
+
+            const receitaBruta =
+                vendaPereciveis.receitaSemPenalidade +
+                vendaMercearia.receitaSemPenalidade +
+                vendaEletro.receitaSemPenalidade +
+                vendaHipel.receitaSemPenalidade;
+
+            const receitaFinal = receitaPereciveis + receitaMercearia + receitaEletro + receitaHipel;
+            const valorPenalidade = Math.max(0, receitaBruta - receitaFinal);
+            const percentualPenalidade = receitaBruta > 0 ? valorPenalidade / receitaBruta : 0;
+
+
+            let eventosAplicados = [];
             eventosRodada.forEach(evento => {
-            const capexField = EVENTO_CAPEX_MAP[evento.type]; 
-
+            const capexField = EVENTO_CAPEX_MAP[evento.type];
             if (capexField && !item.config[capexField]) {
-                penalidade += 0.1; // Exemplo: 10% PERGUNTAR SE É EDITAVEL OU FIXO E VALOR
+                eventosAplicados.push(evento.type);
             }
             });
-            const receitaTotalComPenalidade = receitaTotal * (1 - penalidade);
 
             const r2 = (n) => parseFloat(n.toFixed(2))
             await prisma.roundResult.create({
@@ -98,7 +181,6 @@ async function calcularRankRound(demanda, roomCode, round) {
                     receitaMercearia:          r2(receitaMercearia),
                     receitaEletro:             r2(receitaEletro),
                     receitaHipel:              r2(receitaHipel),
-                    receitaTotal:              r2(receitaTotalComPenalidade),
                     precoMedioCesta:           r2(item.precoMedioCesta),
                     disponibilidade:           r2(item.disponibilidade),
                     csat:                      r2(item.csat),
@@ -107,6 +189,10 @@ async function calcularRankRound(demanda, roomCode, round) {
                     disponibilidadePontos:     item.disponibilidadePontos,
                     csatPontos:               item.csatPontos,
                     pontosTotais:             item.pontosTotais,
+                    receitaTotal: r2(receitaFinal),
+                    diasSemVenda,
+                    eventosAplicados,
+                    valorPenalidade: r2(valorPenalidade),
                 }
             })
             return {
@@ -136,7 +222,12 @@ async function calcularRankRound(demanda, roomCode, round) {
                 receitaMercearia,
                 receitaEletro,
                 receitaHipel,
-                receitaTotal: receitaTotalComPenalidade,
+                receitaBruta: receitaBruta,
+                receitaTotal: receitaFinal,
+                percentualPenalidade: percentualPenalidade,
+                diasSemVenda,
+                eventosAplicados,
+                valorPenalidade,
             }
             })
     )
