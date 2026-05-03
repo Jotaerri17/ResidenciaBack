@@ -16,7 +16,7 @@ async function createRoom({ caixa, juros, totalRounds, quebrasPereciveis,
   estoqueDisponivelHipel  ,
   demandaEstqRounds,
     impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel,custoUntPereciveis, custoUntMercearia,custoUntEletro, custoUntHipel,
-    events }) { console.log("Events recebidos:", events)
+    events }) {
   const code = generateRoomCode()
  
   const room = await prisma.room.create({
