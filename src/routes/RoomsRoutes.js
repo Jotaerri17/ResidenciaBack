@@ -1,5 +1,9 @@
 const { Router } = require('express')
 const roomController = require('../controller/RoomsController.js')
+const { getRankFinal } = require('../controller/RankFinalController.js')
+
+
+
 
 const router = Router()
 
@@ -11,6 +15,7 @@ router.get('/:code/rank/:round', roomController.handleGetRank)
 router.get('/:code/resultado/:round', roomController.handleGetResultado)
 router.patch('/:code/next-round', roomController.handleNextRound)
 router.patch('/:code/finish-game', roomController.handleFinishGame)
+router.get('/rank-final/:roomCode', getRankFinal)
 
     /**
      * @swagger
@@ -357,7 +362,7 @@ router.patch('/:code/finish-game', roomController.handleFinishGame)
      *         schema:
      *           type: string
      *       - in: header
-     *         name: x-facilitador-token
+     *         name: x-facilitator-token
      *         required: true
      *         schema:
      *           type: string
@@ -387,7 +392,7 @@ router.patch('/:code/finish-game', roomController.handleFinishGame)
      *         schema:
      *           type: string
      *       - in: header
-     *         name: x-facilitador-token
+     *         name: x-facilitator-token
      *         required: true
      *         schema:
      *           type: string
@@ -402,6 +407,45 @@ router.patch('/:code/finish-game', roomController.handleFinishGame)
      *         description: Jogo não em andamento
      *       404:
      *         description: Sala não encontrada
+     *
+     * /rooms/rank-final/{roomCode}:
+     *   get:
+     *     summary: Retorna o ranking final da sala com EBITDA acumulado por empresa
+     *     tags:
+     *       - Rooms
+     *     parameters:
+     *       - in: path
+     *         name: roomCode
+     *         required: true
+     *         schema:
+     *           type: string
+     *         description: Código único da sala
+     *         example: "A3KZ91"
+     *     responses:
+     *       200:
+     *         description: Ranking final calculado com sucesso
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 ranking:
+     *                   type: array
+     *                   items:
+     *                     type: object
+     *                     properties:
+     *                       empresaId:
+     *                         type: string
+     *                         example: "uuid-da-empresa"
+     *                       empresaNome:
+     *                         type: string
+     *                         example: "Empresa Alpha"
+     *                       ebitdaAcumulado:
+     *                         type: number
+     *                         description: Soma do EBITDA (%) de todos os rounds
+     *                         example: 87.45
+     *       500:
+     *         description: Erro ao calcular ranking final
      */
 
 module.exports = router

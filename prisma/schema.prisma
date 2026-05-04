@@ -1,80 +1,59 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
-  
 }
 
 datasource db {
   provider = "postgresql"
 }
+
 model USER {
-  id String @id @default(cuid())
-  name String
-  email String @unique
+  id       String @id @default(cuid())
+  name     String
+  email    String @unique
   password String
-  
 }
+
 model Room {
-  id           String     @id @default(uuid())
-  code         String     @unique
-  facilitatorToken String     @unique @default(uuid())
-
-  status       RoomStatus @default(WAITING)
-  currentRound Int        @default(0)
-  totalRounds  Int        @default(4)
-
-  //configuráveis
-  caixa        Float      @default(700000)
-  juros        Float      @default(12)
-
-  quebrasPereciveis Float @default(2)
-  quebrasMercearia  Float @default(1.5)
-  quebrasEletro     Float @default(0)
-  quebrasHipel      Float @default(1)
-  agingPereciveis   Float @default(5.8)
-  agingMercearia    Float @default(0.8)
-  agingEletro       Float @default(1.3)
-  agingHipel        Float @default(1.1)
-
-  impostoPereciveis Float @default(12)
-  impostoMercearia  Float @default(7)
-  impostoEletro     Float @default(25)
-  impostoHipel      Float @default(17) 
-
-
-  custoUntPereciveis Float
-  custoUntMercearia  Float
-  custoUntEletro     Float
-  custoUntHipel      Float
-
-  estoqueDisponivelPereciveis Float
-  estoqueDisponivelMercearia  Float
+  id                          String      @id @default(uuid())
+  code                        String      @unique
+  status                      RoomStatus  @default(WAITING)
+  currentRound                Int         @default(0)
+  totalRounds                 Int         @default(4)
+  caixa                       Float       @default(700000)
+  juros                       Float       @default(12)
+  quebrasPereciveis           Float       @default(2)
+  quebrasMercearia            Float       @default(1.5)
+  quebrasEletro               Float       @default(0)
+  quebrasHipel                Float       @default(1)
+  agingPereciveis             Float       @default(5.8)
+  agingMercearia              Float       @default(0.8)
+  agingEletro                 Float       @default(1.3)
+  agingHipel                  Float       @default(1.1)
+  impostoPereciveis           Float       @default(12)
+  impostoMercearia            Float       @default(7)
+  impostoEletro               Float       @default(25)
+  impostoHipel                Float       @default(17)
+  custoUntPereciveis          Float
+  custoUntMercearia           Float
+  custoUntEletro              Float
+  custoUntHipel               Float
+  createdAt                   DateTime    @default(now())
+  updatedAt                   DateTime    @updatedAt
+  facilitatorToken            String      @unique @default(uuid())
+  capexBalancaValor           Float       @default(75000)
+  capexFreezerValor           Float       @default(20000)
+  capexMelhoriaContinuaValor  Float       @default(45000)
+  capexRedesValor             Float       @default(80000)
+  capexSegurancaValor         Float       @default(50000)
+  capexSelfCheckoutValor      Float       @default(80000)
+  capexSiteValor              Float       @default(65000)
   estoqueDisponivelEletro     Float
   estoqueDisponivelHipel      Float
-
-  demandaEstqRounds Float []
-
-
-  capexSegurancaValor        Float @default(50000)
-  capexBalancaValor          Float @default(75000)
-  capexFreezerValor          Float @default(20000)
-  capexRedesValor            Float @default(80000)
-  capexSiteValor             Float @default(65000)
-  capexSelfCheckoutValor     Float @default(80000)
-  capexMelhoriaContinuaValor Float @default(45000)
-
-
-
-  // Relações
-  events       RoomEvent[]
-  companies    Company[]
-
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  estoqueDisponivelMercearia  Float
+  estoqueDisponivelPereciveis Float
+  demandaEstqRounds           Float[]
+  companies                   Company[]
+  events                      RoomEvent[]
 }
 
 model RoomEvent {
@@ -83,100 +62,89 @@ model RoomEvent {
   round       Int
   type        EventType
   description String
-
   room        Room      @relation(fields: [roomId], references: [id])
 }
 
 model Company {
-  id          String   @id @default(uuid())
-  roomId      String
-  name        String
-  managerName String
-  caixa       Float  // caixa individial da empresa
-
-  room        Room     @relation(fields: [roomId], references: [id])
-  configs     CompanyConfig[]
+  id           String          @id @default(uuid())
+  roomId       String
+  name         String
+  managerName  String
+  caixa        Float
+  createdAt    DateTime        @default(now())
+  room         Room            @relation(fields: [roomId], references: [id])
+  configs      CompanyConfig[]
   RoundResults RoundResult[]
-
-  createdAt   DateTime @default(now())
 }
 
 model CompanyConfig {
-  id        String  @id @default(uuid())
-  companyId String
-  round     Int
-
-  estoquePereciveis Float @default(0)
-  estoqueMercearia  Float @default(0)
-  estoqueEletro     Float @default(0)
-  estoqueHipel      Float @default(0)
-
-  margemPereciveis Float @default(0)
-  margemMercearia  Float @default(0)
-  margemEletro     Float @default(0)
-  margemHipel      Float @default(0)
-
-  operadoresVenda   Int @default(0)
-  operadoresServico Int @default(0)
-
-  capexSeguranca        Boolean @default(false)
-  capexBalanca         Boolean @default(false)
-  capexRedes            Boolean @default(false)
-  capexSite             Boolean @default(false)
-  capexSelfCheckout     Boolean @default(false)
-  capexMelhoriaContinua Boolean @default(false)
-
-  company   Company  @relation(fields: [companyId], references: [id])
-
-  createdAt DateTime @default(now())
+  id                    String   @id @default(uuid())
+  companyId             String
+  round                 Int
+  estoquePereciveis     Float    @default(0)
+  estoqueMercearia      Float    @default(0)
+  estoqueEletro         Float    @default(0)
+  estoqueHipel          Float    @default(0)
+  margemPereciveis      Float    @default(0)
+  margemMercearia       Float    @default(0)
+  margemEletro          Float    @default(0)
+  margemHipel           Float    @default(0)
+  operadoresVenda       Int      @default(0)
+  operadoresServico     Int      @default(0)
+  capexSeguranca        Boolean  @default(false)
+  capexBalanca          Boolean  @default(false)
+  capexRedes            Boolean  @default(false)
+  capexSite             Boolean  @default(false)
+  capexSelfCheckout     Boolean  @default(false)
+  capexMelhoriaContinua Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  company               Company  @relation(fields: [companyId], references: [id])
 
   @@unique([companyId, round])
 }
+
 model RoundResult {
-  id        String  @id @default(uuid())
-  companyId String
-  round     Int
+  id                          String   @id @default(uuid())
+  companyId                   String
+  round                       Int
+  qtdVendidaPereciveis        Float    @default(0)
+  qtdVendidaMercearia         Float    @default(0)
+  qtdVendidaEletro            Float    @default(0)
+  qtdVendidaHipel             Float    @default(0)
+  deixouDeVenderPereciveis    Float    @default(0)
+  deixouDeVenderMercearia     Float    @default(0)
+  deixouDeVenderEletro        Float    @default(0)
+  deixouDeVenderHipel         Float    @default(0)
+  receitaPereciveis           Float    @default(0)
+  receitaMercearia            Float    @default(0)
+  receitaEletro               Float    @default(0)
+  receitaHipel                Float    @default(0)
+  receitaTotal                Float    @default(0)
+  createdAt                   DateTime @default(now())
+  csat                        Float    @default(0)
+  csatPontos                  Int      @default(0)
+  disponibilidade             Float    @default(0)
+  disponibilidadePontos       Int      @default(0)
+  percentualDemanda           Float    @default(0)
+  pontosTotais                Int      @default(0)
+  precoMedioCesta             Float    @default(0)
+  precoMedioCestaPontos       Int      @default(0)
+  precoVendaEletro            Float    @default(0)
+  precoVendaHipel             Float    @default(0)
+  precoVendaMercearia         Float    @default(0)
+  precoVendaPereciveis        Float    @default(0)
+  totalDemandaEletroRound     Float    @default(0)
+  totalDemandaHipelRound      Float    @default(0)
+  totalDemandaMerceariaRound  Float    @default(0)
+  totalDemandaPereciveisRound Float    @default(0)
 
-  qtdVendidaPereciveis Float @default(0)
-  qtdVendidaMercearia  Float @default(0)
-  qtdVendidaEletro     Float @default(0)
-  qtdVendidaHipel      Float @default(0)
-
-  deixouDeVenderPereciveis Float @default(0)
-  deixouDeVenderMercearia  Float @default(0)
-  deixouDeVenderEletro     Float @default(0)
-  deixouDeVenderHipel      Float @default(0)
-
-  receitaPereciveis Float @default(0)
-  receitaMercearia  Float @default(0)
-  receitaEletro     Float @default(0)
-  receitaHipel      Float @default(0)
-
-  receitaTotal      Float @default(0)
-
-  precoMedioCesta       Float @default(0)
-  disponibilidade       Float @default(0)
-  csat                  Float @default(0)
-  percentualDemanda     Float @default(0)
-  precoMedioCestaPontos Int   @default(0)
-  disponibilidadePontos Int   @default(0)
-  csatPontos            Int   @default(0)
-  pontosTotais          Float @default(0)
-
-  precoVendaPereciveis      Float @default(0)
-  precoVendaMercearia       Float @default(0)
-  precoVendaEletro          Float @default(0)
-  precoVendaHipel           Float @default(0)
-  totalDemandaPereciveisRound Float @default(0)
-  totalDemandaMerceariaRound  Float @default(0)
-  totalDemandaEletroRound     Float @default(0)
-  totalDemandaHipelRound      Float @default(0)
-
-  company   Company  @relation(fields: [companyId], references: [id])
-  createdAt DateTime @default(now())
+  ebitda Float @default(0)
+  
+  company                     Company  @relation(fields: [companyId], references: [id])
 
   @@unique([companyId, round])
 }
+
 enum RoomStatus {
   WAITING
   IN_PROGRESS

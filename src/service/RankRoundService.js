@@ -1,9 +1,10 @@
 const prisma = require('../lib/prisma')
+const {calcularEbitda} = require ('../lib/calcularEbitda.js')
 
 const EVENTO_CAPEX_MAP = {
-  EQUIPMENT_FAILURE: 'capexBalanca',
-  SYSTEM_FAILURE: 'capexRedes',
-  OTHER: 'capexMelhoriaContinua',
+    EQUIPMENT_FAILURE: 'capexBalanca',
+    SYSTEM_FAILURE: 'capexRedes',
+    OTHER: 'capexMelhoriaContinua',
 };
 
 /**
@@ -15,13 +16,13 @@ const EVENTO_CAPEX_MAP = {
 async function calcularRankRound(demanda, roomCode, round) {
     const room = await prisma.room.findUnique({
         where: { code: roomCode },
-        include: { events: true}
+        include: { events: true }
     });
     const eventosRodada = room.events.filter(ev => ev.round === round);
 
     const percentualRaw = room.demandaEstqRounds?.[round - 1]
     if (percentualRaw === undefined || percentualRaw === null || isNaN(Number(percentualRaw))) {
-      throw new Error('INVALID_DEMANDA_CONFIG')
+        throw new Error('INVALID_DEMANDA_CONFIG')
     }
     const percentualRound = percentualRaw / 100
 
@@ -78,40 +79,48 @@ async function calcularRankRound(demanda, roomCode, round) {
             // Penalidade por eventos sem CAPEX
             let penalidade = 0;
             eventosRodada.forEach(evento => {
-            const capexField = EVENTO_CAPEX_MAP[evento.type]; 
+                const capexField = EVENTO_CAPEX_MAP[evento.type];
 
-            if (capexField && !item.config[capexField]) {
-                penalidade += 0.1; // Exemplo: 10% PERGUNTAR SE É EDITAVEL OU FIXO E VALOR
-            }
+                if (capexField && !item.config[capexField]) {
+                    penalidade += 0.1; // Exemplo: 10% PERGUNTAR SE É EDITAVEL OU FIXO E VALOR
+                }
             });
             const receitaTotalComPenalidade = receitaTotal * (1 - penalidade);
+            const custosTotais =
+                (item.config.estoquePereciveis * room.custoUntPereciveis * (1 + room.impostoPereciveis / 100)) +
+                (item.config.estoqueMercearia * room.custoUntMercearia * (1 + room.impostoMercearia / 100)) +
+                (item.config.estoqueEletro * room.custoUntEletro * (1 + room.impostoEletro / 100)) +
+                (item.config.estoqueHipel * room.custoUntHipel * (1 + room.impostoHipel / 100))
+
+            const ebitda = calcularEbitda({ receitaLiquida: receitaTotalComPenalidade, custosTotais })
 
             const r2 = (n) => parseFloat(n.toFixed(2))
             await prisma.roundResult.create({
                 data: {
                     companyId: item.empresaId,
                     round,
-                    qtdVendidaPereciveis:      r2(qtdVendidaPereciveis),
-                    qtdVendidaMercearia:       r2(qtdVendidaMercearia),
-                    qtdVendidaEletro:          r2(qtdVendidaEletro),
-                    qtdVendidaHipel:           r2(qtdVendidaHipel),
-                    deixouDeVenderPereciveis:  r2(deixouDeVenderPereciveis),
-                    deixouDeVenderMercearia:   r2(deixouDeVenderMercearia),
-                    deixouDeVenderEletro:      r2(deixouDeVenderEletro),
-                    deixouDeVenderHipel:       r2(deixouDeVenderHipel),
-                    receitaPereciveis:         r2(receitaPereciveis),
-                    receitaMercearia:          r2(receitaMercearia),
-                    receitaEletro:             r2(receitaEletro),
-                    receitaHipel:              r2(receitaHipel),
-                    receitaTotal:              r2(receitaTotalComPenalidade),
-                    precoMedioCesta:           r2(item.precoMedioCesta),
-                    disponibilidade:           r2(item.disponibilidade),
-                    csat:                      r2(item.csat),
-                    percentualDemanda:         r2(item.percentualDemanda),
-                    precoMedioCestaPontos:     item.precoMedioCestaPontos,
-                    disponibilidadePontos:     item.disponibilidadePontos,
-                    csatPontos:               item.csatPontos,
-                    pontosTotais:             item.pontosTotais,
+                    qtdVendidaPereciveis: r2(qtdVendidaPereciveis),
+                    qtdVendidaMercearia: r2(qtdVendidaMercearia),
+                    qtdVendidaEletro: r2(qtdVendidaEletro),
+                    qtdVendidaHipel: r2(qtdVendidaHipel),
+                    deixouDeVenderPereciveis: r2(deixouDeVenderPereciveis),
+                    deixouDeVenderMercearia: r2(deixouDeVenderMercearia),
+                    deixouDeVenderEletro: r2(deixouDeVenderEletro),
+                    deixouDeVenderHipel: r2(deixouDeVenderHipel),
+                    receitaPereciveis: r2(receitaPereciveis),
+                    receitaMercearia: r2(receitaMercearia),
+                    receitaEletro: r2(receitaEletro),
+                    receitaHipel: r2(receitaHipel),
+                    receitaTotal: r2(receitaTotalComPenalidade),
+                    precoMedioCesta: r2(item.precoMedioCesta),
+                    disponibilidade: r2(item.disponibilidade),
+                    csat: r2(item.csat),
+                    ebitda: r2(ebitda),
+                    percentualDemanda: r2(item.percentualDemanda),
+                    precoMedioCestaPontos: item.precoMedioCestaPontos,
+                    disponibilidadePontos: item.disponibilidadePontos,
+                    csatPontos: item.csatPontos,
+                    pontosTotais: item.pontosTotais,
                 }
             })
             return {
@@ -143,7 +152,7 @@ async function calcularRankRound(demanda, roomCode, round) {
                 receitaHipel,
                 receitaTotal: receitaTotalComPenalidade,
             }
-            })
+        })
     )
     console.log('Ranking do round:', JSON.stringify(resultado, null, 2))
     return resultado.sort((a, b) => b.receitaTotal - a.receitaTotal)
