@@ -1,4 +1,4 @@
-require('dotenv').config();
+if (!process.env.DATABASE_URL) require('dotenv').config();
 
 const express = require('express')
 const cors = require('cors')
@@ -27,6 +27,7 @@ io.on('connection', (socket) => {
   console.log('cliente conectado:', socket.id)
 
   socket.on('join_room', (roomCode) => {
+    if (typeof roomCode !== 'string' || !/^[A-Z0-9]{6}$/.test(roomCode)) return
     socket.join(roomCode)
     console.log(`socket ${socket.id} entrou na sala ${roomCode}`)
   })

@@ -172,7 +172,9 @@ describe('DELETE /companies/:id/leave', () => {
     const room = await createRoomInDb();
     const company = await createCompanyInDb(room.id);
 
-    const res = await api.delete(`/companies/${company.id}/leave`);
+    const res = await api
+      .delete(`/companies/${company.id}/leave`)
+      .set('x-facilitator-token', room.facilitatorToken);
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Empresa removida da sala com sucesso!');
@@ -182,8 +184,33 @@ describe('DELETE /companies/:id/leave', () => {
     expect(deleted).toBeNull();
   });
 
+  it('deve retornar 401 sem token', async () => {
+    const room = await createRoomInDb();
+    const company = await createCompanyInDb(room.id);
+
+    const res = await api.delete(`/companies/${company.id}/leave`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Token do facilitador obrigatório.');
+  });
+
+  it('deve retornar 403 com token errado', async () => {
+    const room = await createRoomInDb();
+    const company = await createCompanyInDb(room.id);
+
+    const res = await api
+      .delete(`/companies/${company.id}/leave`)
+      .set('x-facilitator-token', 'token-invalido');
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toBe('Acesso negado.');
+  });
+
   it('deve retornar 404 se empresa não existe', async () => {
-    const res = await api.delete('/companies/id-inexistente/leave');
+    const room = await createRoomInDb();
+    const res = await api
+      .delete('/companies/id-inexistente/leave')
+      .set('x-facilitator-token', room.facilitatorToken);
 
     expect(res.status).toBe(404);
     expect(res.body.message).toBe('Empresa não encontrada.');
@@ -193,7 +220,9 @@ describe('DELETE /companies/:id/leave', () => {
     const room = await createRoomInDb();
     const company = await createCompanyInDb(room.id);
 
-    await api.delete(`/companies/${company.id}/leave`);
+    await api
+      .delete(`/companies/${company.id}/leave`)
+      .set('x-facilitator-token', room.facilitatorToken);
 
     expect(mockIo.to).toHaveBeenCalledWith(room.code);
     expect(mockIo.emit).toHaveBeenCalledWith('companies_updated', expect.any(Array));
@@ -259,7 +288,7 @@ describe('POST /companies/:id/configs', () => {
       .send(buildConfigPayload());
 
     expect(res.status).toBe(201);
-    expect(res.body.message).toBe('Configuracao enviada com sucesso!');
+    expect(res.body.message).toBe('Configuração enviada com sucesso!');
     expect(res.body.round).toBe(1);
     expect(res.body.config).toBeDefined();
   });
@@ -329,7 +358,7 @@ describe('POST /companies/:id/configs', () => {
       .send(buildConfigPayload());
 
     expect(res.status).toBe(404);
-    expect(res.body.message).toBe('Empresa nao encontrada.');
+    expect(res.body.message).toBe('Empresa não encontrada.');
   });
 
   it('deve retornar 400 se jogo não foi iniciado (sala WAITING)', async () => {
@@ -341,7 +370,7 @@ describe('POST /companies/:id/configs', () => {
       .send(buildConfigPayload());
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toBe('O jogo ainda nao foi iniciado.');
+    expect(res.body.message).toBe('O jogo ainda não foi iniciado.');
   });
 
   it('deve retornar 400 se config já foi enviada para esta rodada', async () => {
@@ -359,7 +388,7 @@ describe('POST /companies/:id/configs', () => {
       .send(buildConfigPayload());
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toBe('Configuracao ja enviada para este round.');
+    expect(res.body.message).toBe('Configuração já enviada para este round.');
   });
 
   it('deve emitir company_config_saved com confirmadas, total e caixa', async () => {

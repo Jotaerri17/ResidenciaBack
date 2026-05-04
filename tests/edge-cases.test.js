@@ -47,107 +47,52 @@ afterAll(async () => {
 // ============================================================
 describe('Validação de inputs malformados', () => {
 
-  it.skip('POST /rooms com custoUntPereciveis string → deveria retornar 400', async () => {
-    // BUG: Sem validação de tipo no controller/service
-    // ARQUIVO: src/controller/RoomsController.js (handleCreateRoom)
-    // IMPACTO: Prisma recebe Float inválido e lança PrismaClientValidationError →
-    //          controller captura e devolve 500. Cliente recebe mensagem genérica de erro,
-    //          sem indicação de qual campo está errado.
+  it('POST /rooms com custoUntPereciveis string → deve retornar 400', async () => {
     const res = await api.post('/rooms').send(buildRoomPayload({ custoUntPereciveis: 'abc' }));
     expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Campos devem ser numéricos/);
   });
 
-  it('POST /rooms com custoUntPereciveis string → comportamento atual é 500', async () => {
-    // Documenta o comportamento REAL enquanto o bug não é corrigido.
-    const res = await api.post('/rooms').send(buildRoomPayload({ custoUntPereciveis: 'abc' }));
-    expect(res.status).toBe(500);
-    expect(res.body.message).toBe('Erro ao criar sala.');
-  });
-
-  it.skip('POST /rooms com custoUntPereciveis negativo → deveria retornar 400', async () => {
-    // BUG: Sem validação de valores negativos no controller/service
-    // ARQUIVO: src/controller/RoomsController.js (handleCreateRoom)
-    // IMPACTO: Sala é criada com custo unitário negativo, o que distorce todos os
-    //          cálculos de receita, preço médio e demanda nas rodadas.
+  it('POST /rooms com custoUntPereciveis negativo → deve retornar 400', async () => {
     const res = await api.post('/rooms').send(buildRoomPayload({ custoUntPereciveis: -10 }));
     expect(res.status).toBe(400);
   });
 
-  it('POST /rooms com custoUntPereciveis negativo → comportamento atual é 201', async () => {
-    // Documenta o comportamento REAL — aceita silenciosamente.
-    const res = await api.post('/rooms').send(buildRoomPayload({ custoUntPereciveis: -10 }));
-    expect(res.status).toBe(201);
-    expect(res.body.room.custoUntPereciveis).toBe(-10);
-  });
-
-  it.skip('POST /companies/join com code numérico → deveria retornar 400 (ou 404 com coerção)', async () => {
-    // BUG: Controller não valida se code é string antes de passar ao service.
-    // ARQUIVO: src/controller/CompaniesController.js (handleJoinRoom)
-    // IMPACTO: Prisma 7 faz validação de tipo em runtime no cliente. Quando code é
-    //          um número (Int), lança PrismaClientValidationError internamente,
-    //          o controller captura no catch genérico e retorna 500 em vez de 400.
-    //          Cliente não sabe que o campo tem tipo errado.
+  it('POST /companies/join com code numérico → deve retornar 400', async () => {
     const res = await api
       .post('/companies/join')
       .send({ code: 12345, name: 'Empresa X', managerName: 'Gerente X' });
     expect(res.status).toBe(400);
   });
 
-  it('POST /companies/join com code numérico → comportamento atual é 500 (Prisma rejeita tipo Int no campo String)', async () => {
-    // Prisma 7 valida tipos no cliente antes de enviar a query ao banco.
-    // code (Int) em campo String única → PrismaClientValidationError → catch genérico → 500.
-    const res = await api
-      .post('/companies/join')
-      .send({ code: 12345, name: 'Empresa X', managerName: 'Gerente X' });
-    expect(res.status).toBe(500);
-    expect(res.body.message).toBe('Erro ao entrar na sala.');
-  });
-
-  it.skip('POST /companies/:id/configs com estoquePereciveis negativo → deveria rejeitar', async () => {
-    // BUG: saveConfig não valida se os valores de estoque são não-negativos
-    // ARQUIVO: src/service/CompanyConfigService.js (saveConfig)
-    // IMPACTO: Empresa compra estoque negativo → custo negativo → o caixa aumenta em vez
-    //          de diminuir. Distorce completamente a simulação financeira.
+  it('POST /companies/:id/configs com estoquePereciveis negativo → deve rejeitar (400)', async () => {
     const room = await createRoomInDb({ status: 'IN_PROGRESS', currentRound: 1 });
     const company = await createCompanyInDb(room.id);
     const res = await api
       .post(`/companies/${company.id}/configs`)
       .send(buildConfigPayload({ estoquePereciveis: -100 }));
     expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/não-negativos/);
   });
 
-  it('POST /companies/:id/configs com estoquePereciveis negativo → comportamento atual é 201', async () => {
-    // Documenta que a API aceita valores negativos sem reclamar.
-    const room = await createRoomInDb({ status: 'IN_PROGRESS', currentRound: 1 });
-    const company = await createCompanyInDb(room.id);
-    const res = await api
-      .post(`/companies/${company.id}/configs`)
-      .send(buildConfigPayload({ estoquePereciveis: -100 }));
-    expect(res.status).toBe(201);
-    expect(res.body.config.estoquePereciveis).toBe(-100);
-  });
-
-  it.skip('POST /companies/:id/configs com margemPereciveis negativa → deveria rejeitar', async () => {
-    // BUG: Sem validação de margem negativa em saveConfig
-    // ARQUIVO: src/service/CompanyConfigService.js (saveConfig)
-    // IMPACTO: Margem negativa gera preço de venda abaixo do custo unitário,
-    //          tornando disponibilidade e demanda incorretas.
+  it('POST /companies/:id/configs com margemPereciveis negativa → deve rejeitar (400)', async () => {
     const room = await createRoomInDb({ status: 'IN_PROGRESS', currentRound: 1 });
     const company = await createCompanyInDb(room.id);
     const res = await api
       .post(`/companies/${company.id}/configs`)
       .send(buildConfigPayload({ margemPereciveis: -50 }));
     expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/válidos/);
   });
 
-  it('POST /companies/:id/configs com margemPereciveis negativa → comportamento atual é 201', async () => {
+  it('POST /companies/:id/configs com margemPereciveis como string → deve rejeitar (400)', async () => {
     const room = await createRoomInDb({ status: 'IN_PROGRESS', currentRound: 1 });
     const company = await createCompanyInDb(room.id);
     const res = await api
       .post(`/companies/${company.id}/configs`)
-      .send(buildConfigPayload({ margemPereciveis: -50 }));
-    expect(res.status).toBe(201);
-    expect(res.body.config.margemPereciveis).toBe(-50);
+      .send(buildConfigPayload({ margemPereciveis: 'muito' }));
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/válidos/);
   });
 
   it('POST /companies/:id/configs com campo extra (hackerField) → sanitizeConfigData ignora silenciosamente', async () => {
@@ -172,35 +117,25 @@ describe('Validação de inputs malformados', () => {
 // ============================================================
 describe('Segurança e autorização', () => {
 
-  it.skip('DELETE /companies/:id/leave sem verificar pertencimento à sala → deveria retornar 403', async () => {
-    // BUG: leaveRoom não verifica se a empresa pertence a sala do requisitante.
-    // ARQUIVO: src/service/CompaniesService.js (leaveRoom) /
-    //          src/controller/CompaniesController.js (handleLeaveRoom)
-    // IMPACTO: Qualquer usuário que conheça o ID de uma empresa pode removê-la
-    //          de qualquer sala, mesmo sem ser o facilitador ou a própria empresa.
-    //          Vetor de ataque: enumeração de UUIDs via força bruta ou leak de ID.
+  it('DELETE /companies/:id/leave sem token → deve retornar 401', async () => {
+    const room1 = await createRoomInDb();
+    await createRoomInDb();
+    const companyFromRoom1 = await createCompanyInDb(room1.id, { name: 'Empresa Alvo' });
+
+    const res = await api.delete(`/companies/${companyFromRoom1.id}/leave`);
+    expect(res.status).toBe(401);
+  });
+
+  it('DELETE /companies/:id/leave com token de outra sala → deve retornar 403', async () => {
     const room1 = await createRoomInDb();
     const room2 = await createRoomInDb();
     const companyFromRoom1 = await createCompanyInDb(room1.id, { name: 'Empresa Alvo' });
 
-    // Simulamos requisição "a partir da sala 2" tentando deletar empresa da sala 1.
-    // Sem autenticação, a rota não tem como distinguir isso — qualquer ID funciona.
-    const res = await api.delete(`/companies/${companyFromRoom1.id}/leave`);
+    // Usa token de room2 para tentar deletar empresa de room1
+    const res = await api
+      .delete(`/companies/${companyFromRoom1.id}/leave`)
+      .set('x-facilitator-token', room2.facilitatorToken);
     expect(res.status).toBe(403);
-  });
-
-  it('DELETE /companies/:id/leave com empresa de outra sala → comportamento atual é 200 (bug de autorização)', async () => {
-    // Documenta a ausência de verificação de pertencimento.
-    const room1 = await createRoomInDb();
-    await createRoomInDb(); // room2 — só para ter contexto de "outra sala"
-    const companyFromRoom1 = await createCompanyInDb(room1.id, { name: 'Empresa Alvo' });
-
-    const res = await api.delete(`/companies/${companyFromRoom1.id}/leave`);
-    expect(res.status).toBe(200); // Deleta sem restrição
-
-    // Confirma que realmente foi deletada (o bug é que não deveria ter sido)
-    const deleted = await prisma.company.findUnique({ where: { id: companyFromRoom1.id } });
-    expect(deleted).toBeNull();
   });
 
   it('GET /companies/:id/settings com ID inexistente → 404', async () => {
@@ -209,38 +144,21 @@ describe('Segurança e autorização', () => {
     expect(res.body.message).toBe('Empresa não encontrada.');
   });
 
-  it.skip('GET /rooms/:code/rank/:round com round "abc" → deveria retornar 400', async () => {
-    // BUG: handleGetRank não valida se round é um inteiro válido
-    // ARQUIVO: src/controller/RoomsController.js (handleGetRank)
-    // IMPACTO: parseInt("abc") retorna NaN. Prisma 7 trata NaN como valor ausente
-    //          e lança PrismaClientValidationError ("Argument round is missing"),
-    //          o catch genérico devolve 500. Cliente não sabe que o parâmetro
-    //          está errado.
+  it('GET /rooms/:code/rank/:round com round "abc" → deve retornar 400', async () => {
     const room = await createRoomInDb();
     const res = await api.get(`/rooms/${room.code}/rank/abc`);
     expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Parâmetro round inválido.');
   });
 
-  it('GET /rooms/:code/rank/:round com round "abc" → comportamento atual é 500 (NaN rejeitado pelo Prisma 7)', async () => {
-    // parseInt("abc") = NaN. Prisma 7 não aceita NaN como Int: lança
-    // PrismaClientValidationError ("Argument round is missing") → catch genérico → 500.
-    const room = await createRoomInDb();
-    const res = await api.get(`/rooms/${room.code}/rank/abc`);
-    expect(res.status).toBe(500);
-    expect(res.body.message).toBe('Erro ao buscar ranking.');
-  });
-
-  it('GET /rooms/:code/resultado/:round com round -1 → 200 (retorna array vazio)', async () => {
-    // Não há validação de round mínimo. round: -1 é enviado ao Prisma como inteiro válido,
-    // a query simplesmente não encontra resultados com round = -1.
+  it('GET /rooms/:code/resultado/:round com round -1 → 400', async () => {
     const room = await createRoomInDb();
     const res = await api
       .get(`/rooms/${room.code}/resultado/-1`)
       .set('x-facilitator-token', room.facilitatorToken);
 
-    expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body).toHaveLength(0);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Parâmetro round inválido.');
   });
 });
 
@@ -363,7 +281,7 @@ describe('Estados inválidos do jogo', () => {
       .send(buildConfigPayload());
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toBe('O jogo ainda nao foi iniciado.');
+    expect(res.body.message).toBe('O jogo ainda não foi iniciado.');
   });
 
   it('POST /companies/:id/configs em sala CANCELLED → 400 GAME_NOT_STARTED', async () => {
@@ -375,7 +293,7 @@ describe('Estados inválidos do jogo', () => {
       .send(buildConfigPayload());
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toBe('O jogo ainda nao foi iniciado.');
+    expect(res.body.message).toBe('O jogo ainda não foi iniciado.');
   });
 
   it('PATCH /rooms/:code/start em sala já IN_PROGRESS → 400 ROOM_NOT_WAITING', async () => {

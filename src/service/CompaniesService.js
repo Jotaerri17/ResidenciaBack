@@ -46,7 +46,7 @@ async function getCompaniesByRoom(code) {
   return room.companies
 }
 
-async function leaveRoom({ companyId }, io) {
+async function leaveRoom({ companyId, facilitatorToken }, io) {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
     include: { room: true },
@@ -54,6 +54,10 @@ async function leaveRoom({ companyId }, io) {
 
   if (!company) {
     throw new Error('COMPANY_NOT_FOUND')
+  }
+
+  if (company.room.facilitatorToken !== facilitatorToken) {
+    throw new Error('UNAUTHORIZED')
   }
 
   await prisma.company.delete({

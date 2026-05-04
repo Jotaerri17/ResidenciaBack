@@ -161,7 +161,16 @@ model RoundResult {
   precoMedioCestaPontos Int   @default(0)
   disponibilidadePontos Int   @default(0)
   csatPontos            Int   @default(0)
-  pontosTotais          Int   @default(0)
+  pontosTotais          Float @default(0)
+
+  precoVendaPereciveis      Float @default(0)
+  precoVendaMercearia       Float @default(0)
+  precoVendaEletro          Float @default(0)
+  precoVendaHipel           Float @default(0)
+  totalDemandaPereciveisRound Float @default(0)
+  totalDemandaMerceariaRound  Float @default(0)
+  totalDemandaEletroRound     Float @default(0)
+  totalDemandaHipelRound      Float @default(0)
 
   company   Company  @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())

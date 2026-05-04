@@ -9,6 +9,8 @@ router.patch('/:code/cancel', roomController.handleCancelRoom) // cancela a sala
 router.patch('/:code/start', roomController.handleStartRoom)
 router.get('/:code/rank/:round', roomController.handleGetRank)
 router.get('/:code/resultado/:round', roomController.handleGetResultado)
+router.patch('/:code/next-round', roomController.handleNextRound)
+router.patch('/:code/finish-game', roomController.handleFinishGame)
 
     /**
      * @swagger
@@ -339,8 +341,67 @@ router.get('/:code/resultado/:round', roomController.handleGetResultado)
      *       404:
      *         description: Sala não encontrada
      *       500:
-     *         description: Erro ao buscar resultado
+     *         description: Erro ao processar resultado do round
+     *
+     * /rooms/{code}/next-round:
+     *   patch:
+     *     summary: Avança para a próxima rodada
+     *     tags:
+     *       - Rooms
+     *     security:
+     *       - facilitatorToken: []
+     *     parameters:
+     *       - in: path
+     *         name: code
+     *         required: true
+     *         schema:
+     *           type: string
+     *       - in: header
+     *         name: x-facilitador-token
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Rodada avançada com sucesso
+     *       401:
+     *         description: Token obrigatório
+     *       403:
+     *         description: Acesso negado
+     *       400:
+     *         description: Jogo não em andamento ou rodadas esgotadas
+     *       404:
+     *         description: Sala não encontrada
+     *
+     * /rooms/{code}/finish-game:
+     *   patch:
+     *     summary: Encerra o jogo e calcula resultados finais
+     *     tags:
+     *       - Rooms
+     *     security:
+     *       - facilitatorToken: []
+     *     parameters:
+     *       - in: path
+     *         name: code
+     *         required: true
+     *         schema:
+     *           type: string
+     *       - in: header
+     *         name: x-facilitador-token
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Jogo encerrado com ranking final
+     *       401:
+     *         description: Token obrigatório
+     *       403:
+     *         description: Acesso negado
+     *       400:
+     *         description: Jogo não em andamento
+     *       404:
+     *         description: Sala não encontrada
      */
-    
 
 module.exports = router

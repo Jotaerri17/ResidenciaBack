@@ -44,6 +44,24 @@ async function saveConfig({ companyId, ...configData }, io) {
     throw new Error('GAME_NOT_STARTED')
   }
 
+  // Validação anti-dinheiro-infinito: estoques devem ser números não-negativos
+  const camposEstoque = ['estoquePereciveis', 'estoqueMercearia', 'estoqueEletro', 'estoqueHipel']
+  for (const campo of camposEstoque) {
+    const val = configData[campo] ?? 0
+    if (typeof val !== 'number' || isNaN(val) || val < 0) {
+      throw new Error('INVALID_STOCK')
+    }
+  }
+
+  // Margens devem ser números válidos
+  const camposMargens = ['margemPereciveis', 'margemMercearia', 'margemEletro', 'margemHipel']
+  for (const campo of camposMargens) {
+    const val = configData[campo] ?? 0
+    if (typeof val !== 'number' || isNaN(val) || val < 0) {
+      throw new Error('INVALID_MARGIN')
+    }
+  }
+
   const round = company.room.currentRound
   const room = company.room
 

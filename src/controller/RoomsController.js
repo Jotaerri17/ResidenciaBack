@@ -1,4 +1,4 @@
-const { createRoom, getRoomByCode, cancelRoom, startRoom } = require('../service/RoomsService.js')
+const { createRoom, getRoomByCode, cancelRoom, startRoom, nextRound, finishGame } = require('../service/RoomsService.js')
 const prisma = require('../lib/prisma')
 
 
@@ -23,6 +23,24 @@ async function handleCreateRoom(req, res) {
       estoqueDisponivelHipel,
       demandaEstqRounds,
       impostoPereciveis, impostoMercearia, impostoEletro, impostoHipel, events } = req.body
+
+    // Valida campos obrigatórios
+    const requiredFields = [
+      'custoUntPereciveis', 'custoUntMercearia', 'custoUntEletro', 'custoUntHipel',
+      'estoqueDisponivelPereciveis', 'estoqueDisponivelMercearia', 'estoqueDisponivelEletro', 'estoqueDisponivelHipel'
+    ]
+    const missing = requiredFields.filter(f => req.body[f] === undefined || req.body[f] === null)
+    if (missing.length > 0) {
+      return res.status(400).json({ message: `Campos obrigatórios faltando: ${missing.join(', ')}` })
+    }
+    const invalidType = requiredFields.filter(f => typeof req.body[f] !== 'number' || isNaN(req.body[f]))
+    if (invalidType.length > 0) {
+      return res.status(400).json({ message: `Campos devem ser numéricos: ${invalidType.join(', ')}` })
+    }
+    const negativeFields = requiredFields.filter(f => req.body[f] < 0)
+    if (negativeFields.length > 0) {
+      return res.status(400).json({ message: `Campos não podem ser negativos: ${negativeFields.join(', ')}` })
+    }
 
     const room = await createRoom({
       caixa, juros, totalRounds, quebrasPereciveis,
@@ -135,11 +153,15 @@ async function handleStartRoom(req, res) {
 async function handleGetRank(req, res) {
   try {
     const { code, round } = req.params
+    const roundNum = parseInt(round)
+    if (isNaN(roundNum) || roundNum < 1) {
+      return res.status(400).json({ message: 'Parâmetro round inválido.' })
+    }
     const companyId = req.query.companyId || req.query.companyID
 
     const rank = await prisma.roundResult.findMany({
       where: {
-        round: parseInt(round),
+        round: roundNum,
         company: { room: { code } }
       },
       select: {
@@ -157,13 +179,13 @@ async function handleGetRank(req, res) {
         receitaTotal: 'desc'
       }
     })
-    let meuResultado = null 
+    let meuResultado = null
     if(companyId) {
       meuResultado = await prisma.roundResult.findUnique({
         where: {
           companyId_round: {
             companyId,
-            round: parseInt(round)
+            round: roundNum
           }
         },
         select: {
@@ -218,6 +240,10 @@ async function handleGetRank(req, res) {
 async function handleGetResultado(req, res) {
   try {
     const { code, round } = req.params
+    const roundNum = parseInt(round)
+    if (isNaN(roundNum) || roundNum < 1) {
+      return res.status(400).json({ message: 'Parâmetro round inválido.' })
+    }
     const facilitatorToken = req.headers['x-facilitator-token']
 
     if (!facilitatorToken) {
@@ -236,7 +262,7 @@ async function handleGetResultado(req, res) {
 
     const resultado = await prisma.roundResult.findMany({
       where: {
-        round: parseInt(round),
+        round: roundNum,
         company: { room: { code } }
       },
       include: {
@@ -282,5 +308,63 @@ async function handleGetResultado(req, res) {
   }
 }
 
+async function handleNextRound(req, res) {
+  try {
+    const { code } = req.params
+    const facilitatorToken = req.headers['x-facilitator-token'] || req.headers['x-facilitador-token']
+    const io = req.app.get('io')
 
-module.exports = { handleCreateRoom, handleGetRoom, handleCancelRoom, handleStartRoom, handleGetRank, handleGetResultado }
+    if (!facilitatorToken) {
+      return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
+    }
+
+    const room = await nextRound({ code, facilitatorToken }, io)
+
+    return res.status(200).json({
+      message: `Rodada ${room.currentRound} iniciada com sucesso!`,
+      room,
+    })
+
+  } catch (error) {
+    if (error.message === 'ROOM_NOT_FOUND')
+      return res.status(404).json({ message: 'Sala não encontrada.' })
+    if (error.message === 'UNAUTHORIZED')
+      return res.status(403).json({ message: 'Acesso negado.' })
+    if (error.message === 'ROOM_NOT_IN_PROGRESS')
+      return res.status(400).json({ message: 'O jogo não está em andamento.' })
+    if (error.message === 'ROOM_MAX_ROUNDS_REACHED')
+      return res.status(400).json({ message: 'Todas as rodadas já foram concluídas.' })
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao avançar rodada.' })
+  }
+}
+async function handleFinishGame(req, res) {
+  try {
+    const { code } = req.params
+    const facilitatorToken = req.headers['x-facilitator-token'] || req.headers['x-facilitador-token']
+    const io = req.app.get('io')
+
+    if (!facilitatorToken) {
+      return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
+    }
+
+    const resultado = await finishGame({ code, facilitatorToken }, io)
+
+    return res.status(200).json({
+      message: 'Jogo encerrado com sucesso!',
+      ...resultado
+    })
+
+  } catch (error) {
+    if (error.message === 'ROOM_NOT_FOUND')
+      return res.status(404).json({ message: 'Sala não encontrada.' })
+    if (error.message === 'UNAUTHORIZED')
+      return res.status(403).json({ message: 'Acesso negado.' })
+    if (error.message === 'ROOM_NOT_IN_PROGRESS')
+      return res.status(400).json({ message: 'O jogo não está em andamento.' })
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao encerrar jogo.' })
+  }
+}
+
+module.exports = { handleCreateRoom, handleGetRoom, handleCancelRoom, handleStartRoom, handleGetRank, handleGetResultado, handleNextRound, handleFinishGame }

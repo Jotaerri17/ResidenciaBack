@@ -92,19 +92,19 @@ describe('POST /rooms', () => {
     expect(res.body.room.events[0].type).toBe('EQUIPMENT_FAILURE');
   });
 
-  it('deve retornar 500 quando campos obrigatórios estão faltando', async () => {
+  it('deve retornar 400 quando campos obrigatórios estão faltando', async () => {
     const res = await api.post('/rooms').send({});
 
-    expect(res.status).toBe(500);
-    expect(res.body.message).toBe('Erro ao criar sala.');
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Campos obrigatórios faltando/);
   });
 
-  // Documentação de bug: controller não valida tipos dos campos
-  it.skip('[BUG] deveria retornar 400 se custoUntPereciveis for string', async () => {
+  it('deve retornar 400 se custoUntPereciveis for string', async () => {
     const res = await api
       .post('/rooms')
       .send(buildRoomPayload({ custoUntPereciveis: 'abc' }));
     expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Campos devem ser numéricos/);
   });
 });
 

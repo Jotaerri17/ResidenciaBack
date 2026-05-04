@@ -4,8 +4,6 @@ const { PrismaClient } = require('@prisma/client');
 
 // Pega a URL do banco que está no seu .env
 const connectionString = process.env.DATABASE_URL;
-
-console.log('🔍 URL do banco:', connectionString ? '✅ encontrada' : '❌ undefined')
 // Cria a conexão com o Postgres usando o driver oficial (pg)
 const pool = new Pool({
   connectionString,

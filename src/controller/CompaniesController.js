@@ -10,6 +10,10 @@ async function handleJoinRoom(req, res) {
       return res.status(400).json({ message: 'code, name e managerName são obrigatórios.' })
     }
 
+    if (typeof code !== 'string') {
+      return res.status(400).json({ message: 'O código da sala deve ser uma string.' })
+    }
+
     const company = await joinRoom({ code, name, managerName }, io)
 
     return res.status(201).json({
@@ -46,13 +50,21 @@ async function handleLeaveRoom(req, res) {
   try {
     const { id } = req.params
     const io = req.app.get('io')
+    const facilitatorToken = req.headers['x-facilitator-token']
 
-    await leaveRoom({ companyId: id }, io)
+    if (!facilitatorToken) {
+      return res.status(401).json({ message: 'Token do facilitador obrigatório.' })
+    }
+
+    await leaveRoom({ companyId: id, facilitatorToken }, io)
 
     return res.status(200).json({ message: 'Empresa removida da sala com sucesso!' })
   } catch (error) {
     if (error.message === 'COMPANY_NOT_FOUND') {
       return res.status(404).json({ message: 'Empresa não encontrada.' })
+    }
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(403).json({ message: 'Acesso negado.' })
     }
     console.error(error)
     return res.status(500).json({ message: 'Erro ao sair da sala.' })
