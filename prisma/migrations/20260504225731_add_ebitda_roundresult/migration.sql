@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "RoundResult" ADD COLUMN     "ebitda" DOUBLE PRECISION NOT NULL DEFAULT 0;
