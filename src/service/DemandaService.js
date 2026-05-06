@@ -9,14 +9,22 @@ async function calcularDemanda(code, round) {
     const room = await prisma.room.findUnique({
         where: { code }
     })
-    const empresa = await prisma.company.findMany({
-        where: { roomId: room.id },
-        include: {
-            configs: {
-                where: { round }
-            },
-        }
-    })
+
+    const [empresa, quiz] = await Promise.all([
+        prisma.company.findMany({
+            where: { roomId: room.id },
+            include: { configs: { where: { round } } }
+        }),
+        prisma.quiz.findFirst({
+            where: { roomId: room.id },
+            include: { results: true }
+        })
+    ])
+
+    const quizMap = new Map(
+        (quiz?.results ?? []).map((r) => [r.companyId, r.acertos])
+    )
+    const totalQuestions = quiz?.totalQuestions ?? 1
 
     const totalEmpresas = empresa.length
 
@@ -51,7 +59,8 @@ async function calcularDemanda(code, round) {
 
         // csat
         const proporcaoOperadores = config.operadoresServico / 10
-        const proporcaoAcertos = 10 / 10
+        const acertos = quizMap.get(empresa.id) ?? 0
+        const proporcaoAcertos = acertos / totalQuestions
         const csat = parseFloat(((proporcaoOperadores * proporcaoAcertos) * 100).toFixed(2))
 
         return {

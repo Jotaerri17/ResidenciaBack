@@ -54,6 +54,7 @@ model Room {
   demandaEstqRounds           Float[]
   companies                   Company[]
   events                      RoomEvent[]
+  quiz                        Quiz?
 }
 
 model RoomEvent {
@@ -75,6 +76,7 @@ model Company {
   room         Room            @relation(fields: [roomId], references: [id])
   configs      CompanyConfig[]
   RoundResults RoundResult[]
+  quizResults  QuizResult[]
 }
 
 model CompanyConfig {
@@ -143,6 +145,27 @@ model RoundResult {
   company                     Company  @relation(fields: [companyId], references: [id])
 
   @@unique([companyId, round])
+}
+
+model Quiz {
+  id             String       @id @default(uuid())
+  roomId         String       @unique
+  totalQuestions Int
+  createdAt      DateTime     @default(now())
+  room           Room         @relation(fields: [roomId], references: [id])
+  results        QuizResult[]
+}
+
+model QuizResult {
+  id        String   @id @default(uuid())
+  quizId    String
+  companyId String
+  acertos   Int      @default(0)
+  createdAt DateTime @default(now())
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  @@unique([quizId, companyId])
 }
 
 enum RoomStatus {

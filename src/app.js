@@ -7,6 +7,7 @@ const { Server } = require('socket.io')
 
 const roomsRoutes = require('./routes/RoomsRoutes')
 const companiesRoutes = require('./routes/CompaniesRoutes')
+const quizRoutes = require('./routes/QuizRoutes')
 
 const swaggerUi = require('swagger-ui-express')
 const swaggerSpec = require('./docs/swagger')
@@ -42,6 +43,7 @@ app.use(express.json())
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 app.use('/rooms', roomsRoutes)
 app.use('/companies', companiesRoutes)
+app.use('/quiz', quizRoutes)
 
 app.get('/', (req, res) => {
   res.json({ mensagem: "🚀 API Express funcionando!" })

@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "prisma generate",
+    "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "test": "cross-env NODE_ENV=test jest --runInBand --forceExit --verbose"
   },
