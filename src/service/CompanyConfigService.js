@@ -96,7 +96,20 @@ async function saveConfig({ companyId, ...configData }, io) {
   const custoPessoal =
     ((configData.operadoresVenda || 0) + (configData.operadoresServico || 0)) * 3000
 
-  const totalGastos = totalCapex + custoEstoque + custoPessoal
+  // Custos de licenciamento/manutenção recorrentes por rodada
+  // Baseados em CAPEX adquirido em qualquer rodada anterior OU na rodada atual
+  const previousConfigs = await prisma.companyConfig.findMany({
+    where: { companyId, round: { lt: round } },
+  })
+  const ownsCapex = (field) => !!configData[field] || previousConfigs.some(c => c[field])
+
+  let custoLicencas = 0
+  if (ownsCapex('capexSeguranca'))    custoLicencas += 100   // 20% × R$500
+  if (ownsCapex('capexSite'))         custoLicencas += 150   // 30% × R$500
+  if (ownsCapex('capexSelfCheckout')) custoLicencas += 320   // 4 × R$80
+  if (!ownsCapex('capexBalanca'))     custoLicencas += 400   // manutenção se não tiver Balança/Freezer
+
+  const totalGastos = totalCapex + custoEstoque + custoPessoal + custoLicencas
 
   const excedente = Math.max(0, totalGastos - company.caixa)
   const jurosAplicado = excedente * (room.juros / 100)

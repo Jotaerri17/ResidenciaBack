@@ -1,11 +1,12 @@
 const {Router} = require ('express')
-const {handleJoinRoom, handleGetCompanies, handleLeaveRoom, handleGetCompanySettings} = require ('../controller/CompaniesController.js')
+const {handleJoinRoom, handleGetCompanies, handleLeaveRoom, handleGetCompanySettings, handleGetLatestConfig} = require ('../controller/CompaniesController.js')
 const { handleSaveConfig } = require('../controller/CompanyConfigController')
 
 const router = Router()
 
 router.post('/join', handleJoinRoom) // coloca os dados da empresa e entra na sala
 router.post('/:id/configs', handleSaveConfig) // envia config da rodada
+router.get('/:id/configs/latest', handleGetLatestConfig) // última config enviada pela empresa
 router.get('/:id/settings', handleGetCompanySettings) // pega settings da empresa por ID
 router.get('/:code', handleGetCompanies) // pega as empresas que estão na sala
 router.delete('/:id/leave', handleLeaveRoom)
