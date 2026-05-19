@@ -1,5 +1,8 @@
 const prisma = require('../lib/prisma.js')
 const { generateRoomCode } =  require('../utils/generateRoomCode.js')
+const { calcularDemanda } = require('./DemandaService')
+const { calcularRankRound } = require('./RankRoundService')
+const { calcularRankFinal } = require('./RankRoundFinal')
 
 async function createRoom({ caixa, juros, totalRounds, quebrasPereciveis,
     quebrasMercearia, quebrasEletro,quebrasHipel,agingEletro,agingHipel,agingMercearia,agingPereciveis, 
@@ -159,6 +162,17 @@ async function nextRound({ code, facilitatorToken }, io) {
     companyStatus
   })
 
+  // Rounds 3+: sem nova config das empresas — calcular rank automaticamente
+  if (next > 2) {
+    try {
+      const demanda = await calcularDemanda(code, next)
+      const rank = await calcularRankRound(demanda, code, next)
+      io.to(code).emit('all_companies_confirmed', { round: next, demanda, rank })
+    } catch (err) {
+      console.error(`Erro ao calcular rank automático da rodada ${next}:`, err)
+    }
+  }
+
   return updatedRoom
 }
 async function finishGame({ code, facilitatorToken }, io) {
@@ -179,61 +193,12 @@ async function finishGame({ code, facilitatorToken }, io) {
 
   const totalRounds = room.currentRound
 
-  // 1. Ranking final geral
-  const rankingGeral = room.companies.map(c => {
-    const receitaTotal = c.RoundResults.reduce((sum, r) => sum + r.receitaTotal, 0)
-    return {
-      companyId: c.id,
-      name: c.name,
-      managerName: c.managerName,
-      receitaTotal: parseFloat(receitaTotal.toFixed(2))
-    }
-  }).sort((a, b) => b.receitaTotal - a.receitaTotal)
+  const [rankingFinal, updatedRoom] = await Promise.all([
+    calcularRankFinal(code),
+    prisma.room.update({ where: { code }, data: { status: 'FINISHED' } })
+  ])
 
-  // 2. Vencedor por rodada
-  const vencedoresPorRodada = []
-  for (let r = 1; r <= totalRounds; r++) {
-    const resultadosRodada = room.companies
-      .map(c => {
-        const res = c.RoundResults.find(rr => rr.round === r)
-        return res ? { companyId: c.id, name: c.name, receitaTotal: res.receitaTotal } : null
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.receitaTotal - a.receitaTotal)
-
-    vencedoresPorRodada.push({ round: r, vencedor: resultadosRodada[0] || null })
-  }
-
-  // 3. Discrepância por rodada
-  const discrepanciaPorRodada = []
-  for (let r = 1; r <= totalRounds; r++) {
-    const resultadosRodada = room.companies
-      .map(c => {
-        const res = c.RoundResults.find(rr => rr.round === r)
-        return res ? res.receitaTotal : 0
-      })
-      .sort((a, b) => b - a)
-
-    const primeiro = resultadosRodada[0] || 0
-    const ultimo = resultadosRodada[resultadosRodada.length - 1] || 0
-    const discrepancia = primeiro > 0
-      ? parseFloat((((primeiro - ultimo) / primeiro) * 100).toFixed(2))
-      : 0
-
-    discrepanciaPorRodada.push({ round: r, discrepancia, primeiro, ultimo })
-  }
-
-  const updatedRoom = await prisma.room.update({
-    where: { code },
-    data: { status: 'FINISHED' }
-  })
-
-  const payload = {
-    rankingGeral,
-    vencedoresPorRodada,
-    discrepanciaPorRodada,
-    totalRounds
-  }
+  const payload = { rankingFinal, totalRounds }
 
   io.to(code).emit('game_finished', payload)
 

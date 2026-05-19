@@ -13,13 +13,41 @@ async function calcularDemanda(code, round) {
     const [empresa, quiz] = await Promise.all([
         prisma.company.findMany({
             where: { roomId: room.id },
-            include: { configs: { where: { round } } }
+            include: {
+                configs: { where: { round } },
+                RoundResults: { where: { round: { lt: round } } },
+            }
         }),
         prisma.quiz.findFirst({
             where: { roomId: room.id },
             include: { results: true }
         })
     ])
+
+    const companyIds = empresa.map(e => e.id)
+
+    // Configs de rodadas anteriores: soma total comprado (para calcular restante)
+    const previousConfigsMap = await prisma.companyConfig.groupBy({
+        by: ['companyId'],
+        where: { companyId: { in: companyIds }, round: { lt: round } },
+        _sum: {
+            estoquePereciveis: true,
+            estoqueMercearia: true,
+            estoqueEletro: true,
+            estoqueHipel: true,
+        },
+    })
+
+    // Fallback: última config de cada empresa (para rodadas 3+ sem nova config)
+    const latestConfigsRaw = await Promise.all(
+        companyIds.map(id => prisma.companyConfig.findFirst({
+            where: { companyId: id },
+            orderBy: { round: 'desc' },
+        }))
+    )
+    const latestConfigsMap = Object.fromEntries(
+        companyIds.map((id, i) => [id, latestConfigsRaw[i]])
+    )
 
     const quizMap = new Map(
         (quiz?.results ?? []).map((r) => [r.companyId, r.acertos])
@@ -29,7 +57,40 @@ async function calcularDemanda(code, round) {
     const totalEmpresas = empresa.length
 
     const resultados = empresa.map(empresa => {
-        const config = empresa.configs[0]
+        const configDaRodada = empresa.configs[0]
+        const isNovaConfig = !!configDaRodada
+        // Se não há config para esta rodada, usa a última salva (rounds 3+)
+        const config = configDaRodada || latestConfigsMap[empresa.id]
+
+        // Estoque restante de rodadas anteriores
+        const prevConfig = previousConfigsMap.find(p => p.companyId === empresa.id)
+        const prevCompradoPereciveis = prevConfig?._sum?.estoquePereciveis ?? 0
+        const prevCompradoMercearia  = prevConfig?._sum?.estoqueMercearia  ?? 0
+        const prevCompradoEletro     = prevConfig?._sum?.estoqueEletro     ?? 0
+        const prevCompradoHipel      = prevConfig?._sum?.estoqueHipel      ?? 0
+
+        const prevVendidoPereciveis = empresa.RoundResults.reduce((s, r) => s + r.qtdVendidaPereciveis, 0)
+        const prevVendidoMercearia  = empresa.RoundResults.reduce((s, r) => s + r.qtdVendidaMercearia,  0)
+        const prevVendidoEletro     = empresa.RoundResults.reduce((s, r) => s + r.qtdVendidaEletro,     0)
+        const prevVendidoHipel      = empresa.RoundResults.reduce((s, r) => s + r.qtdVendidaHipel,      0)
+
+        const estoqueRestantePereciveis = Math.max(0, prevCompradoPereciveis - prevVendidoPereciveis)
+        const estoqueRestanteMercearia  = Math.max(0, prevCompradoMercearia  - prevVendidoMercearia)
+        const estoqueRestanteEletro     = Math.max(0, prevCompradoEletro     - prevVendidoEletro)
+        const estoqueRestanteHipel      = Math.max(0, prevCompradoHipel      - prevVendidoHipel)
+
+        // Estoque total: nova compra (só se for config da rodada atual) + restante de rodadas anteriores
+        const novaCompraPereciveis = isNovaConfig ? (config.estoquePereciveis || 0) : 0
+        const novaCompraMercearia  = isNovaConfig ? (config.estoqueMercearia  || 0) : 0
+        const novaCompraEletro     = isNovaConfig ? (config.estoqueEletro     || 0) : 0
+        const novaCompraHipel      = isNovaConfig ? (config.estoqueHipel      || 0) : 0
+
+        const estoqueTotal = {
+            pereciveis: novaCompraPereciveis + estoqueRestantePereciveis,
+            mercearia:  novaCompraMercearia  + estoqueRestanteMercearia,
+            eletro:     novaCompraEletro     + estoqueRestanteEletro,
+            hipel:      novaCompraHipel      + estoqueRestanteHipel,
+        }
 
         // preco medio da cesta
         const precoVendaPereciveis = room.custoUntPereciveis * (1 + config.margemPereciveis / 100)
@@ -44,11 +105,11 @@ async function calcularDemanda(code, round) {
             precoVendaHipel
         ) / 4
 
-        // disponibilidade — protegida contra divisão por zero
-        const disponibilidadePereciveis = safeDiv(config.estoquePereciveis, room.estoqueDisponivelPereciveis)
-        const disponibilidadeMercearia  = safeDiv(config.estoqueMercearia,  room.estoqueDisponivelMercearia)
-        const disponibilidadeEletro     = safeDiv(config.estoqueEletro,     room.estoqueDisponivelEletro)
-        const disponibilidadeHipel      = safeDiv(config.estoqueHipel,      room.estoqueDisponivelHipel)
+        // disponibilidade — usa estoque total (comprado agora + restante de rodadas anteriores)
+        const disponibilidadePereciveis = safeDiv(estoqueTotal.pereciveis, room.estoqueDisponivelPereciveis)
+        const disponibilidadeMercearia  = safeDiv(estoqueTotal.mercearia,  room.estoqueDisponivelMercearia)
+        const disponibilidadeEletro     = safeDiv(estoqueTotal.eletro,     room.estoqueDisponivelEletro)
+        const disponibilidadeHipel      = safeDiv(estoqueTotal.hipel,      room.estoqueDisponivelHipel)
 
         const disponibilidade = (
             disponibilidadePereciveis +
@@ -73,7 +134,13 @@ async function calcularDemanda(code, round) {
             precoVendaMercearia,
             precoVendaEletro,
             precoVendaHipel,
-            config
+            config: {
+                ...config,
+                estoquePereciveis: estoqueTotal.pereciveis,
+                estoqueMercearia:  estoqueTotal.mercearia,
+                estoqueEletro:     estoqueTotal.eletro,
+                estoqueHipel:      estoqueTotal.hipel,
+            }
         }
     })
 

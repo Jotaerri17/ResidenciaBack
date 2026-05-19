@@ -83,8 +83,25 @@ async function getCompanySettings(companyId) {
 
   const room = company.room;
 
+  const [configs, results] = await Promise.all([
+    prisma.companyConfig.findMany({ where: { companyId } }),
+    prisma.roundResult.findMany({ where: { companyId } }),
+  ]);
+
+  const totalComprado = (campo) => configs.reduce((sum, c) => sum + (c[campo] || 0), 0);
+  const totalVendido  = (campo) => results.reduce((sum, r) => sum + (r[campo] || 0), 0);
+
+  const estoqueAtualPereciveis = Math.max(0, totalComprado('estoquePereciveis') - totalVendido('qtdVendidaPereciveis'));
+  const estoqueAtualMercearia  = Math.max(0, totalComprado('estoqueMercearia')  - totalVendido('qtdVendidaMercearia'));
+  const estoqueAtualEletro     = Math.max(0, totalComprado('estoqueEletro')     - totalVendido('qtdVendidaEletro'));
+  const estoqueAtualHipel      = Math.max(0, totalComprado('estoqueHipel')      - totalVendido('qtdVendidaHipel'));
+
   return {
     saldoInicial: company.caixa,
+    estoqueAtualPereciveis,
+    estoqueAtualMercearia,
+    estoqueAtualEletro,
+    estoqueAtualHipel,
     juros: room.juros,
     custoUntPereciveis: room.custoUntPereciveis,
     custoUntMercearia: room.custoUntMercearia,
@@ -103,4 +120,16 @@ async function getCompanySettings(companyId) {
 }
 
 
-module.exports = { joinRoom, getCompaniesByRoom, leaveRoom, getCompanySettings}
+async function getLatestConfig(companyId) {
+  const company = await prisma.company.findUnique({ where: { id: companyId } })
+  if (!company) throw new Error('COMPANY_NOT_FOUND')
+
+  const config = await prisma.companyConfig.findFirst({
+    where: { companyId },
+    orderBy: { round: 'desc' },
+  })
+
+  return config
+}
+
+module.exports = { joinRoom, getCompaniesByRoom, leaveRoom, getCompanySettings, getLatestConfig }

@@ -1,5 +1,5 @@
 const prisma = require('../lib/prisma')
-const { joinRoom, getCompaniesByRoom, leaveRoom, getCompanySettings, } = require('../service/CompaniesService')
+const { joinRoom, getCompaniesByRoom, leaveRoom, getCompanySettings, getLatestConfig } = require('../service/CompaniesService')
 
 async function handleJoinRoom(req, res) {
   try {
@@ -86,4 +86,18 @@ async function handleGetCompanySettings(req, res) {
   }
 }
 
-module.exports = { handleJoinRoom, handleGetCompanies, handleLeaveRoom, handleGetCompanySettings}
+async function handleGetLatestConfig(req, res) {
+  try {
+    const { id } = req.params
+    const config = await getLatestConfig(id)
+    return res.status(200).json(config || null)
+  } catch (error) {
+    if (error.message === 'COMPANY_NOT_FOUND') {
+      return res.status(404).json({ message: 'Empresa não encontrada.' })
+    }
+    console.error(error)
+    return res.status(500).json({ message: 'Erro ao buscar última configuração.' })
+  }
+}
+
+module.exports = { handleJoinRoom, handleGetCompanies, handleLeaveRoom, handleGetCompanySettings, handleGetLatestConfig }
