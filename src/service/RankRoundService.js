@@ -87,10 +87,10 @@ async function calcularRankRound(demanda, roomCode, round) {
             });
             const receitaTotalComPenalidade = receitaTotal * (1 - penalidade);
             const custosTotais =
-                (item.config.estoquePereciveis * room.custoUntPereciveis * (1 + room.impostoPereciveis / 100)) +
-                (item.config.estoqueMercearia * room.custoUntMercearia * (1 + room.impostoMercearia / 100)) +
-                (item.config.estoqueEletro * room.custoUntEletro * (1 + room.impostoEletro / 100)) +
-                (item.config.estoqueHipel * room.custoUntHipel * (1 + room.impostoHipel / 100))
+                (qtdVendidaPereciveis * room.custoUntPereciveis) +
+                (qtdVendidaMercearia * room.custoUntMercearia) +
+                (qtdVendidaEletro * room.custoUntEletro) +
+                (qtdVendidaHipel * room.custoUntHipel)
 
             const ebitda = calcularEbitda({ receitaLiquida: receitaTotalComPenalidade, custosTotais })
 
