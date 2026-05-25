@@ -103,7 +103,7 @@ async function calcularDemanda(code, round) {
             precoVendaMercearia +
             precoVendaEletro +
             precoVendaHipel
-        ) / 4
+        ) 
 
         // disponibilidade — usa estoque total (comprado agora + restante de rodadas anteriores)
         const disponibilidadePereciveis = safeDiv(estoqueTotal.pereciveis, room.estoqueDisponivelPereciveis)
