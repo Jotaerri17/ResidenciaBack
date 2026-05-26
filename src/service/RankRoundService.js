@@ -2,9 +2,12 @@ const prisma = require('../lib/prisma')
 const {calcularEbitda} = require ('../lib/calcularEbitda.js')
 
 const EVENTO_CAPEX_MAP = {
-    EQUIPMENT_FAILURE: 'capexBalanca',
-    SYSTEM_FAILURE: 'capexRedes',
-    OTHER: 'capexMelhoriaContinua',
+    SEGURANCA: 'capexSeguranca',
+    BALANCA_FREEZER: 'capexBalanca',
+    REDES: 'capexRedes',
+    SITE: 'capexSite',
+    SELF_CHECKOUT: 'capexSelfCheckout',
+    MELHORIA_CONTINUA: 'capexMelhoriaContinua',
 };
 
 /**
