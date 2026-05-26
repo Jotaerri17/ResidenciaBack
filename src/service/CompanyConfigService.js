@@ -101,6 +101,25 @@ async function saveConfig({ companyId, ...configData }, io) {
   const previousConfigs = await prisma.companyConfig.findMany({
     where: { companyId, round: { lt: round } },
   })
+
+  // Validação do limite de estoque disponível por empresa
+  const prevCompradoPereciveis = previousConfigs.reduce((s, c) => s + (c.estoquePereciveis || 0), 0)
+  const prevCompradoMercearia  = previousConfigs.reduce((s, c) => s + (c.estoqueMercearia  || 0), 0)
+  const prevCompradoEletro     = previousConfigs.reduce((s, c) => s + (c.estoqueEletro     || 0), 0)
+  const prevCompradoHipel      = previousConfigs.reduce((s, c) => s + (c.estoqueHipel      || 0), 0)
+
+  const novaCompraPereciveis = configData.estoquePereciveis || 0
+  const novaCompraMercearia  = configData.estoqueMercearia  || 0
+  const novaCompraEletro     = configData.estoqueEletro     || 0
+  const novaCompraHipel      = configData.estoqueHipel      || 0
+
+  if (prevCompradoPereciveis + novaCompraPereciveis > room.estoqueDisponivelPereciveis ||
+      prevCompradoMercearia  + novaCompraMercearia  > room.estoqueDisponivelMercearia  ||
+      prevCompradoEletro     + novaCompraEletro     > room.estoqueDisponivelEletro     ||
+      prevCompradoHipel      + novaCompraHipel      > room.estoqueDisponivelHipel) {
+    throw new Error('STOCK_LIMIT_EXCEEDED')
+  }
+
   const ownsCapex = (field) => !!configData[field] || previousConfigs.some(c => c[field])
 
   let custoLicencas = 0
@@ -149,7 +168,14 @@ async function saveConfig({ companyId, ...configData }, io) {
     }
   }
 
-  return { config, round, caixa: updatedCompany.caixa, totalGastos, jurosAplicado }
+  const estoqueDisponivelRestante = {
+    pereciveis: room.estoqueDisponivelPereciveis - (prevCompradoPereciveis + novaCompraPereciveis),
+    mercearia:  room.estoqueDisponivelMercearia  - (prevCompradoMercearia  + novaCompraMercearia),
+    eletro:     room.estoqueDisponivelEletro     - (prevCompradoEletro     + novaCompraEletro),
+    hipel:      room.estoqueDisponivelHipel      - (prevCompradoHipel      + novaCompraHipel),
+  }
+
+  return { config, round, caixa: updatedCompany.caixa, totalGastos, jurosAplicado, estoqueDisponivelRestante }
 }
 
 module.exports = { saveConfig }

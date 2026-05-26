@@ -33,6 +33,9 @@ async function handleSaveConfig(req, res) {
     if (error.message === 'INVALID_MARGIN')
       return res.status(400).json({ message: 'Valores de margem devem ser números válidos.' })
 
+    if (error.message === 'STOCK_LIMIT_EXCEEDED')
+      return res.status(400).json({ message: 'Estoque solicitado ultrapassa o limite disponível para esta empresa.' })
+
     // Race condition: unique constraint disparado concorrentemente
     if (error.code === 'P2002')
       return res.status(400).json({ message: 'Configuração já enviada para este round.' })
