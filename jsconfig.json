@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "checkJs": true,
-    "moduleResolution": "node",
+    "checkJs": false,
+    "moduleResolution": "bundler",
     "target": "ES2020",
     "module": "commonjs"
   },
