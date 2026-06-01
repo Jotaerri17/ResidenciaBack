@@ -222,11 +222,21 @@ async function handleGetRank(req, res) {
       const percentualPenalidade = 
         receitaBruta > 0 ? (valorPenalidade / receitaBruta) * 100 : 0
 
+      const eventosDaRodada = await prisma.roomEvent.findMany({
+        where: {
+          room: { code },
+          round: roundNum
+        },
+        select: { type: true }
+      })
+      const eventosAplicados = eventosDaRodada.map(e => e.type)
+
       meuResultado = {
         ...meuResultado,
         receitaBruta,
         valorPenalidade,
         percentualPenalidade,
+        eventosAplicados
       }
     }
 
@@ -301,7 +311,35 @@ async function handleGetResultado(req, res) {
       }
     })
 
-    return res.status(200).json(resultado)
+    const eventosDaRodada = await prisma.roomEvent.findMany({
+      where: {
+        roomId: room.id,
+        round: roundNum
+      },
+      select: { type: true }
+    })
+    const eventosAplicados = eventosDaRodada.map(e => e.type)
+
+    const resultadoFinal = resultado.map(item => {
+      const receitaBruta =
+        item.receitaPereciveis +
+        item.receitaMercearia +
+        item.receitaEletro +
+        item.receitaHipel
+      
+      const valorPenalidade = receitaBruta - item.receitaTotal
+      const percentualPenalidade = receitaBruta > 0 ? (valorPenalidade / receitaBruta) * 100 : 0
+
+      return {
+        ...item,
+        receitaBruta,
+        valorPenalidade,
+        percentualPenalidade,
+        eventosAplicados
+      }
+    })
+
+    return res.status(200).json(resultadoFinal)
   } catch (error) {
     console.error(error)
     return res.status(500).json({ message: 'Erro ao buscar resultado.' })

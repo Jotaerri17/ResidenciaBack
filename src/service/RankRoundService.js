@@ -154,6 +154,7 @@ async function calcularRankRound(demanda, roomCode, round) {
                 receitaEletro,
                 receitaHipel,
                 receitaTotal: receitaTotalComPenalidade,
+                eventosAplicados: eventosRodada.map(e => e.type),
             }
         })
     )
