@@ -49,6 +49,31 @@ async function calcularDemanda(code, round) {
         companyIds.map((id, i) => [id, latestConfigsRaw[i]])
     )
 
+    // CAPEX cumulativo: uma vez comprado, protege para sempre
+    const allCapexConfigs = await prisma.companyConfig.findMany({
+        where: { companyId: { in: companyIds }, round: { lte: round } },
+        select: {
+            companyId: true,
+            capexSeguranca: true,
+            capexBalanca: true,
+            capexRedes: true,
+            capexSite: true,
+            capexSelfCheckout: true,
+            capexMelhoriaContinua: true,
+        }
+    })
+    const capexAcumuladoMap = {}
+    for (const cfg of allCapexConfigs) {
+        const acc = capexAcumuladoMap[cfg.companyId] || {}
+        if (cfg.capexSeguranca)    acc.capexSeguranca    = true
+        if (cfg.capexBalanca)      acc.capexBalanca      = true
+        if (cfg.capexRedes)        acc.capexRedes        = true
+        if (cfg.capexSite)         acc.capexSite         = true
+        if (cfg.capexSelfCheckout) acc.capexSelfCheckout = true
+        if (cfg.capexMelhoriaContinua) acc.capexMelhoriaContinua = true
+        capexAcumuladoMap[cfg.companyId] = acc
+    }
+
     const quizMap = new Map(
         (quiz?.results ?? []).map((r) => [r.companyId, r.acertos])
     )
@@ -136,6 +161,8 @@ async function calcularDemanda(code, round) {
             precoVendaHipel,
             config: {
                 ...config,
+                // CAPEX acumulado sobrescreve os campos booleanos da config atual
+                ...(capexAcumuladoMap[empresa.id] || {}),
                 estoquePereciveis: estoqueTotal.pereciveis,
                 estoqueMercearia:  estoqueTotal.mercearia,
                 estoqueEletro:     estoqueTotal.eletro,
