@@ -222,21 +222,40 @@ async function handleGetRank(req, res) {
       const percentualPenalidade = 
         receitaBruta > 0 ? (valorPenalidade / receitaBruta) * 100 : 0
 
-      const eventosDaRodada = await prisma.roomEvent.findMany({
-        where: {
-          room: { code },
-          round: roundNum
-        },
-        select: { type: true }
-      })
+      const [eventosDaRodada, configsAnteriores] = await Promise.all([
+        prisma.roomEvent.findMany({
+          where: { room: { code }, round: roundNum },
+          select: { type: true }
+        }),
+        prisma.companyConfig.findMany({
+          where: { companyId, round: { lte: roundNum } },
+          select: {
+            capexSeguranca: true,
+            capexBalanca: true,
+            capexRedes: true,
+            capexSite: true,
+            capexSelfCheckout: true,
+            capexMelhoriaContinua: true,
+          }
+        })
+      ])
       const eventosAplicados = eventosDaRodada.map(e => e.type)
+
+      // CAPEX é cumulativo: protegido se comprou em qualquer rodada até a atual
+      const capexAcumulado = configsAnteriores.reduce((acc, cfg) => {
+        for (const key of Object.keys(cfg)) {
+          if (cfg[key]) acc[key] = true
+        }
+        return acc
+      }, {})
 
       meuResultado = {
         ...meuResultado,
         receitaBruta,
         valorPenalidade,
         percentualPenalidade,
-        eventosAplicados
+        eventosAplicados,
+        config: capexAcumulado,
       }
     }
 
@@ -279,6 +298,7 @@ async function handleGetResultado(req, res) {
         
         company: {
           select: {
+            id: true,
             name: true,
             managerName: true,
             caixa: true,
@@ -311,13 +331,40 @@ async function handleGetResultado(req, res) {
       }
     })
 
-    const eventosDaRodada = await prisma.roomEvent.findMany({
-      where: {
-        roomId: room.id,
-        round: roundNum
-      },
-      select: { type: true }
-    })
+    const companyIds = resultado.map(r => r.company.id ?? r.companyId).filter(Boolean)
+
+    const [eventosDaRodada, allCapexConfigs] = await Promise.all([
+      prisma.roomEvent.findMany({
+        where: { roomId: room.id, round: roundNum },
+        select: { type: true }
+      }),
+      prisma.companyConfig.findMany({
+        where: { companyId: { in: companyIds }, round: { lte: roundNum } },
+        select: {
+          companyId: true,
+          capexSeguranca: true,
+          capexBalanca: true,
+          capexRedes: true,
+          capexSite: true,
+          capexSelfCheckout: true,
+          capexMelhoriaContinua: true,
+        }
+      })
+    ])
+
+    // Acumula CAPEX por empresa: uma vez comprado, protege para sempre
+    const capexAcumuladoMap = {}
+    for (const cfg of allCapexConfigs) {
+      const acc = capexAcumuladoMap[cfg.companyId] || {}
+      if (cfg.capexSeguranca)        acc.capexSeguranca        = true
+      if (cfg.capexBalanca)          acc.capexBalanca          = true
+      if (cfg.capexRedes)            acc.capexRedes            = true
+      if (cfg.capexSite)             acc.capexSite             = true
+      if (cfg.capexSelfCheckout)     acc.capexSelfCheckout     = true
+      if (cfg.capexMelhoriaContinua) acc.capexMelhoriaContinua = true
+      capexAcumuladoMap[cfg.companyId] = acc
+    }
+
     const eventosAplicados = eventosDaRodada.map(e => e.type)
 
     const resultadoFinal = resultado.map(item => {
@@ -326,16 +373,18 @@ async function handleGetResultado(req, res) {
         item.receitaMercearia +
         item.receitaEletro +
         item.receitaHipel
-      
+
       const valorPenalidade = receitaBruta - item.receitaTotal
       const percentualPenalidade = receitaBruta > 0 ? (valorPenalidade / receitaBruta) * 100 : 0
+      const cid = item.company?.id ?? item.companyId
 
       return {
         ...item,
         receitaBruta,
         valorPenalidade,
         percentualPenalidade,
-        eventosAplicados
+        eventosAplicados,
+        capexAcumulado: capexAcumuladoMap[cid] || {},
       }
     })
 
