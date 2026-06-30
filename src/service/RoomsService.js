@@ -4,7 +4,7 @@ const { calcularDemanda } = require('./DemandaService')
 const { calcularRankRound } = require('./RankRoundService')
 const { calcularRankFinal } = require('./RankRoundFinal')
 
-async function createRoom({ caixa, juros, totalRounds, quebrasPereciveis,
+async function createRoom({ caixa, juros, totalRounds, hasQuiz, quebrasPereciveis,
     quebrasMercearia, quebrasEletro,quebrasHipel,agingEletro,agingHipel,agingMercearia,agingPereciveis, 
      capexSegurancaValor,
   capexBalancaValor,
@@ -28,6 +28,7 @@ async function createRoom({ caixa, juros, totalRounds, quebrasPereciveis,
       caixa:             caixa     ?? 700000,
       juros:             juros     ?? 12,
       totalRounds:       totalRounds       ?? 4,
+      hasQuiz:           hasQuiz           ?? true,
       quebrasPereciveis: quebrasPereciveis ?? 2,
       quebrasMercearia:  quebrasMercearia  ?? 1.5,
       quebrasEletro:     quebrasEletro     ?? 0,
@@ -127,7 +128,7 @@ async function startRoom({ code, facilitatorToken }, io) {
     data: { status: 'IN_PROGRESS', currentRound: 1 },
   })
 
-  io.to(code).emit('game_started')
+  io.to(code).emit('game_started', { hasQuiz: updatedRoom.hasQuiz })
 
   return updatedRoom
 }
@@ -149,6 +150,13 @@ async function nextRound({ code, facilitatorToken }, io) {
     data: { currentRound: next },
     include: { companies: true }
   })
+
+  try {
+    const { clearTimerState } = require('./TimerService')
+    await clearTimerState(code)
+  } catch (err) {
+    console.error('[RoomsService] Erro ao limpar timer no nextRound:', err.message)
+  }
 
   const companyStatus = room.companies.map(c => {
     const hasConfig = c.configs.some(cfg => cfg.round === room.currentRound)
@@ -197,6 +205,13 @@ async function finishGame({ code, facilitatorToken }, io) {
     calcularRankFinal(code),
     prisma.room.update({ where: { code }, data: { status: 'FINISHED' } })
   ])
+
+  try {
+    const { clearTimerState } = require('./TimerService')
+    await clearTimerState(code)
+  } catch (err) {
+    console.error('[RoomsService] Erro ao limpar timer no finishGame:', err.message)
+  }
 
   const payload = { rankingFinal, totalRounds }
 

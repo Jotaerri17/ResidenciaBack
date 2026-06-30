@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Room" ADD COLUMN "hasQuiz" BOOLEAN NOT NULL DEFAULT true;

@@ -15,7 +15,10 @@ async function calcularRankFinal(roomCode) {
     const ranking = companies.map(company => {
         // EBITDA acumulado das rodadas
         const totalReceita = company.RoundResults.reduce((s, r) => s + r.receitaTotal, 0)
-        const totalCustos  = company.RoundResults.reduce((s, r) => s + r.receitaTotal * (1 - r.ebitda / 100), 0)
+        const totalCustos  = company.RoundResults.reduce((s, r) => {
+            const ebitdaVal = isNaN(r.ebitda) || r.ebitda === null ? 0 : r.ebitda
+            return s + r.receitaTotal * (1 - ebitdaVal / 100)
+        }, 0)
 
         // Estoque não vendido acumulado (comprado - vendido em todas as rodadas)
         const totalComprado = (campo) => company.configs.reduce((s, c) => s + (c[campo] || 0), 0)

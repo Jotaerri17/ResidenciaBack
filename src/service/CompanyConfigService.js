@@ -160,9 +160,16 @@ async function saveConfig({ companyId, ...configData }, io) {
 
   if (totalConfiguradas === totalEmpresas) {
     try{
-      const demanda = await calcularDemanda(room.code, round) 
-      const rank = await calcularRankRound(demanda, room.code, round)
-      io.to(room.code).emit('all_companies_confirmed', { round, demanda,rank  })
+      // Verificar se o RoundResult já foi calculado para evitar double-dispatch
+      // em race conditions (múltiplas empresas confirmando simultaneamente)
+      const existingResult = await prisma.roundResult.findFirst({
+        where: { round, company: { roomId: company.roomId } }
+      })
+      if (!existingResult) {
+        const demanda = await calcularDemanda(room.code, round) 
+        const rank = await calcularRankRound(demanda, room.code, round)
+        io.to(room.code).emit('all_companies_confirmed', { round, demanda, rank })
+      }
     }catch (err){
       console.error('erro ao calcular rank' ,err)
     }

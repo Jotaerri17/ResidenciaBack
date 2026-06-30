@@ -172,14 +172,30 @@ async function calcularDemanda(code, round) {
     })
 
     function rankear(lista, campo, menorEMelhor = false) {
+        const totalEmpresas = lista.length
         const ordenado = [...lista].sort((a, b) =>
             menorEMelhor ? a[campo] - b[campo] : b[campo] - a[campo]
         )
-        // Constrói mapa posição → O(n) em vez de findIndex → O(n²)
-        const posMap = new Map(ordenado.map((e, i) => [e.empresaId, i]))
+
+        // Detectar empates: empresas com mesmo valor recebem a média dos pontos das suas posições
+        const pontosPorEmpresaId = new Map()
+        let i = 0
+        while (i < ordenado.length) {
+            const valorAtual = ordenado[i][campo]
+            let j = i
+            // encontrar todos com o mesmo valor
+            while (j < ordenado.length && ordenado[j][campo] === valorAtual) j++
+            // posições i..j-1 estão empatadas → pontos = media de (totalEmpresas-i) a (totalEmpresas-j+1)
+            const pontosGrupo = []
+            for (let k = i; k < j; k++) pontosGrupo.push(totalEmpresas - k)
+            const mediaPontos = pontosGrupo.reduce((a, b) => a + b, 0) / pontosGrupo.length
+            for (let k = i; k < j; k++) pontosPorEmpresaId.set(ordenado[k].empresaId, mediaPontos)
+            i = j
+        }
+
         return lista.map(item => ({
             ...item,
-            [`${campo}Pontos`]: totalEmpresas - posMap.get(item.empresaId)
+            [`${campo}Pontos`]: pontosPorEmpresaId.get(item.empresaId)
         }))
     }
 

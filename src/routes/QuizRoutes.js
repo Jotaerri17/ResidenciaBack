@@ -1,8 +1,22 @@
 const { Router } = require('express')
-const { handleSaveQuiz, handleGetQuizRanking } = require('../controller/QuizController')
+const { 
+  handleSaveQuiz, 
+  handleGetQuizRanking, 
+  handleGenerateQuestions, 
+  handleGetQuestions, 
+  handleSubmitAnswer, 
+  handleFinishQuiz 
+} = require('../controller/QuizController')
 
 const router = Router()
 
+// NOVAS ROTAS — adicionar antes das rotas legadas
+router.post('/:roomCode/generate', handleGenerateQuestions)
+router.post('/:roomCode/questions', handleGetQuestions)
+router.post('/:roomCode/answer', handleSubmitAnswer)
+router.post('/:roomCode/finish', handleFinishQuiz)
+
+// ROTAS LEGADAS — manter intactas
 router.post('/:roomCode', handleSaveQuiz)
 router.get('/:roomCode/ranking', handleGetQuizRanking)
 

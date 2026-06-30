@@ -19,6 +19,7 @@ model Room {
   status                      RoomStatus  @default(WAITING)
   currentRound                Int         @default(0)
   totalRounds                 Int         @default(4)
+  hasQuiz                     Boolean     @default(true)
   caixa                       Float       @default(700000)
   juros                       Float       @default(12)
   quebrasPereciveis           Float       @default(2)
@@ -154,16 +155,18 @@ model Quiz {
   createdAt      DateTime     @default(now())
   room           Room         @relation(fields: [roomId], references: [id])
   results        QuizResult[]
+  session        QuizSession?
 }
 
 model QuizResult {
-  id        String   @id @default(uuid())
-  quizId    String
-  companyId String
-  acertos   Int      @default(0)
-  createdAt DateTime @default(now())
-  quiz      Quiz     @relation(fields: [quizId], references: [id])
-  company   Company  @relation(fields: [companyId], references: [id])
+  id               String   @id @default(uuid())
+  quizId           String
+  companyId        String
+  acertos          Int      @default(0)
+  timeExpiredCount Int      @default(0)
+  createdAt        DateTime @default(now())
+  quiz             Quiz     @relation(fields: [quizId], references: [id])
+  company          Company  @relation(fields: [companyId], references: [id])
 
   @@unique([quizId, companyId])
 }
@@ -182,4 +185,50 @@ enum EventType {
   SITE
   SELF_CHECKOUT
   MELHORIA_CONTINUA
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  questions Question[]
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  text          String
+  options       Json
+  correctAnswer Int
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime @default(now())
+}
+
+model QuizSession {
+  id            String         @id @default(uuid())
+  quizId        String         @unique
+  quiz          Quiz           @relation(fields: [quizId], references: [id])
+  questions     Json
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  status        QuizStatus     @default(PENDING)
+  answers       Answer[]
+}
+
+model Answer {
+  id             String      @id @default(uuid())
+  quizSessionId  String
+  quizSession    QuizSession @relation(fields: [quizSessionId], references: [id])
+  companyId      String
+  questionId     String
+  selectedOption Int?
+  isCorrect      Boolean     @default(false)
+  timeExpired    Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+}
+
+enum QuizStatus {
+  PENDING
+  ACTIVE
+  FINISHED
 }

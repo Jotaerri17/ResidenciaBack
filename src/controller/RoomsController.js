@@ -4,7 +4,7 @@ const prisma = require('../lib/prisma')
 
 async function handleCreateRoom(req, res) {
   try {
-    const { caixa, juros, totalRounds, quebrasPereciveis,
+    const { caixa, juros, totalRounds, hasQuiz, quebrasPereciveis,
       quebrasMercearia, quebrasEletro, quebrasHipel, agingEletro, agingHipel, agingMercearia, agingPereciveis,
       custoUntPereciveis,
       custoUntMercearia,
@@ -43,7 +43,7 @@ async function handleCreateRoom(req, res) {
     }
 
     const room = await createRoom({
-      caixa, juros, totalRounds, quebrasPereciveis,
+      caixa, juros, totalRounds, hasQuiz, quebrasPereciveis,
       quebrasMercearia, quebrasEletro, quebrasHipel, agingEletro, agingHipel, agingMercearia, agingPereciveis,
       capexBalancaValor, capexFreezerValor, capexMelhoriaContinuaValor, capexRedesValor, capexSegurancaValor, capexSelfCheckoutValor, capexSiteValor,
       custoUntPereciveis, custoUntMercearia, custoUntHipel, custoUntEletro,
@@ -76,12 +76,16 @@ async function handleGetRoom(req, res) {
       return res.status(404).json({ message: 'Sala não encontrada.' })
     }
 
-    return res.status(200).json(room)
+    // Omitir facilitatorToken do retorno público para evitar que
+    // qualquer pessoa com o código da sala execute ações de facilitador
+    const { facilitatorToken: _, ...roomData } = room
+    return res.status(200).json(roomData)
   } catch (error) {
     console.error(error)
     return res.status(500).json({ message: 'Erro ao buscar sala.' })
   }
 }
+
 async function handleCancelRoom(req, res) {
   try {
     const io = req.app.get('io')
